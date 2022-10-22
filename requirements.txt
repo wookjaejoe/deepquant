@@ -1,0 +1,7 @@
+pandas~=1.5.1
+requests~=2.28.1
+pykrx~=1.0.38
+matplotlib~=3.6.1
+sqlalchemy~=1.4.42
+datetime~=4.7
+pymysql~=1.0.2
