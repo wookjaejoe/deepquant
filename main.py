@@ -1,8 +1,9 @@
-from repository.maria.chart import get_month_chart
+import repository.deepsearch as ds
 
 
 def main():
-    get_month_chart(2000, 12)
+    for year in range(1996, 2022):
+        ds.collect_by_year('자기자본이익율', year)
 
 
 # upload_all_corp_from_pre_queried()
