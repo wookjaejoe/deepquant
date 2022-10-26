@@ -5,6 +5,7 @@ import pandas
 from requests import get, Response
 from resources import pre_queried_dir
 from config import config
+from typing import *
 
 
 def collect_by_quart(title: str, year: int, quart: int):
@@ -89,3 +90,44 @@ def load_all_by(title: str, year: int, to_quart: int, limit: int):
             quart = 4
         else:
             quart -= 1
+
+
+# 1,2 - 작년3분기(11월 15일까지 발표), 작년2분기, 작년1분기, 제작년4분기
+# 3,4 - 작년 당기데이터 조회
+# 5,6,7 - 1분기(5월 15일까지 발표), 작년4분기, 작년3분기, 작년2분기 <- 이때도 당기 데이터 조회하면 코넥스 커버 가능
+# 8,9,10 - 2분기(8월 15일까지 발표), 1분기, 작년4분기, 작년3분기
+# 11,12 - 3분기(11월 15일까지 발표), 2분기, 1분기, 작년1분기
+def load(title: str, year: int, month: int) -> List[pandas.DataFrame]:
+    if month in [1, 2]:
+        return [
+            load_by_quart(title, year - 1, 3),
+            load_by_quart(title, year - 1, 2),
+            load_by_quart(title, year - 1, 1),
+            load_by_quart(title, year - 2, 4),
+        ]
+    elif month in [3, 4]:
+        return [load_by_year(title, year - 1)]
+    elif month in [5, 6, 7]:
+        # return [load_by_year(title, year - 1)]
+        return [
+            load_by_quart(title, year, 1),
+            load_by_quart(title, year - 1, 4),
+            load_by_quart(title, year - 1, 3),
+            load_by_quart(title, year - 1, 2)
+        ]
+    elif month in [8, 9, 10]:
+        return [
+            load_by_quart(title, year, 2),
+            load_by_quart(title, year, 1),
+            load_by_quart(title, year - 1, 4),
+            load_by_quart(title, year - 1, 3)
+        ]
+    elif month in [11, 12]:
+        return [
+            load_by_quart(title, year, 3),
+            load_by_quart(title, year, 2),
+            load_by_quart(title, year, 1),
+            load_by_quart(title, year - 1, 4)
+        ]
+    else:
+        raise Exception(f"Invalid month: {month}")

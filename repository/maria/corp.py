@@ -63,12 +63,12 @@ def fetch_all() -> Iterator[Corp]:
     return [Corp(code=record[0], name=record[1]) for record in cursor.fetchall()]
 
 
-_cache: Dict[str, Corp] = {}
+_cache = {corp.code: corp for corp in fetch_all()}
 
 
 def get_name(code: str) -> str:
-    global _cache
-    if not _cache:
-        _cache = {corp.code: corp for corp in fetch_all()}
-
     return _cache[code].name
+
+
+def exists(code: str) -> bool:
+    return code in _cache.keys()
