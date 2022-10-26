@@ -49,6 +49,7 @@ def run(year: int, month: int):
     change = change.dropna()
 
     # 재무데이터 로드
+    f.write(f"재무데이터 로드(기준년월: {year}년{month}월)" + os.linesep)
     df = sum(ds.load('매출액', year, month))
     df = pd.merge(df, sum(ds.load('매출원가', year, month)), left_index=True, right_index=True)
     df = pd.merge(df, sum(ds.load('당기순이익', year, month)), left_index=True, right_index=True)
@@ -88,7 +89,7 @@ def run(year: int, month: int):
 def main():
     # n년 지표데이터, 1년 수익율(n+2년 3월종가-n+1년 3월종가)
     # 1996 - 2021
-    fromyear = 2021
+    fromyear = 2006
     toyear = 2022
     final_amount = 1
     for year in range(fromyear, toyear + 1):
@@ -109,7 +110,7 @@ def main():
             f.write(
                 os.linesep.join(
                     [
-                        f"{year}년 {month}월",
+                        f"매수 년월 = {year}년 {month}월",
                         top.to_csv(),
                         f"누적금액: {final_amount.round(3)}, 최초 투입금을 1로 가정",
                         "",

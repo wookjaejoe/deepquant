@@ -98,7 +98,12 @@ def load_all_by(title: str, year: int, to_quart: int, limit: int):
 # 8,9,10 - 2분기(8월 15일까지 발표), 1분기, 작년4분기, 작년3분기
 # 11,12 - 3분기(11월 15일까지 발표), 2분기, 1분기, 작년1분기
 def load(title: str, year: int, month: int) -> List[pandas.DataFrame]:
+    print("!!! 재무데이터 로드 !!!")
     if month in [1, 2]:
+        print(title, year - 1, 3)
+        print(title, year - 1, 2)
+        print(title, year - 1, 1)
+        print(title, year - 2, 4)
         return [
             load_by_quart(title, year - 1, 3),
             load_by_quart(title, year - 1, 2),
@@ -106,9 +111,15 @@ def load(title: str, year: int, month: int) -> List[pandas.DataFrame]:
             load_by_quart(title, year - 2, 4),
         ]
     elif month in [3, 4]:
+        print(title, year - 1)
         return [load_by_year(title, year - 1)]
     elif month in [5, 6, 7]:
+        # print(title, year - 1)  # 5, 6, 7의 경우 1분기 기업 실적 발표된 상황이지만, 전년 당기보고서가 더 수익율 좋은 것 같다.
         # return [load_by_year(title, year - 1)]
+        print(title, year, 1)
+        print(title, year - 1, 4)
+        print(title, year - 1, 3)
+        print(title, year - 1, 2)
         return [
             load_by_quart(title, year, 1),
             load_by_quart(title, year - 1, 4),
@@ -116,6 +127,10 @@ def load(title: str, year: int, month: int) -> List[pandas.DataFrame]:
             load_by_quart(title, year - 1, 2)
         ]
     elif month in [8, 9, 10]:
+        print(title, year, 2)
+        print(title, year, 1)
+        print(title, year - 1, 4)
+        print(title, year - 1, 3)
         return [
             load_by_quart(title, year, 2),
             load_by_quart(title, year, 1),
@@ -123,6 +138,10 @@ def load(title: str, year: int, month: int) -> List[pandas.DataFrame]:
             load_by_quart(title, year - 1, 3)
         ]
     elif month in [11, 12]:
+        print(title, year, 3)
+        print(title, year, 2)
+        print(title, year, 1)
+        print(title, year - 1, 4)
         return [
             load_by_quart(title, year, 3),
             load_by_quart(title, year, 2),
