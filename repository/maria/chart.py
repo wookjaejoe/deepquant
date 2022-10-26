@@ -17,7 +17,7 @@ class ChartSnapshot:
     cap: int
 
 
-def get_month_chart(year: int, month: int):
+def get_month_chart(year: int, month: int) -> pandas.DataFrame:
     chart_fields = [field.name for field in fields(ChartSnapshot)]
     with MariaConnection() as conn:
         cursor = conn.cursor()
@@ -86,7 +86,7 @@ def update_all_month_chart():
     """
     today = date.today()
     year_month_list = []
-    for year in range(1996, today.year + 1):
+    for year in range(2022, today.year + 1):
         if year == today.year:
             month_end = today.month - 1
         else:
@@ -103,11 +103,15 @@ def update_month_chart(year: int, month: int):
     print(f'Updating month_chart({year}/{month})')
     with MariaConnection() as connection:
         cursor = connection.cursor()
-        for row in _snapshot(year, month):
-            insert_query = f"""
-                insert ignore into month_chart
-                values ('{row[0]}', '{row[1]}', {row[2]}, {row[3]}, {row[4]}, {row[5]}, {row[6]}, {row[7]});
-                """
-            cursor.execute(insert_query)
+        values = [f"""('{row[0]}', '{row[1]}', {row[2]}, {row[3]}, {row[4]}, {row[5]}, {row[6]}, {row[7]})"""
+                  for row in _snapshot(year, month)]
 
+        values_text = ",\n".join(values)
+        insert_query = f"""
+            insert ignore into month_chart
+            values
+            {values_text};
+        """
+        n = cursor.execute(insert_query)
+        print(f"{n} rows updated")
         connection.commit()

@@ -77,3 +77,15 @@ def load_by_year(title: str, year: int):
 
 def load_by_quart(title: str, year: int, quart: int):
     return _load(os.path.join(pre_queried_dir, title, f'{year}-{quart}.json'), title)
+
+
+def load_all_by(title: str, year: int, to_quart: int, limit: int):
+    assert to_quart in [1, 2, 3, 4]
+    quart = to_quart
+    for i in range(limit):
+        yield load_by_quart(title, year, quart)
+        if quart == 1:
+            year -= 1
+            quart = 4
+        else:
+            quart -= 1
