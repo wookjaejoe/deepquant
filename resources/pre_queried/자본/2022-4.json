@@ -1,0 +1,83 @@
+{
+    "success": true,
+    "data": {
+        "profile": {
+            "compile": 76,
+            "interpreter": 96,
+            "pods": 48,
+            "total": 221
+        },
+        "exceptions": [],
+        "pods": [
+            {
+                "class": "Input",
+                "position": -1,
+                "title": "Input Interpretation",
+                "content": {
+                    "input": "상장 기업 and 자본 2022년 4분기",
+                    "interpretation": {
+                        "plaintext": "(상장 기업 and 2022-01-01-2022-12-31 4 년 분기 자본)",
+                        "tagged": "(<Property>상장 기업</Property> and <DateRange>2022-01-01-2022-12-31</DateRange> <Keyword>4 년 분기</Keyword> <Property>자본</Property>)"
+                    },
+                    "detailed_interpretation": {
+                        "plaintext": "(상장 기업 and 2022-01-01-2022-12-31 4 년 분기 나이스/재무제표/IFRS/연결/표준/재무상태표/자본)",
+                        "tagged": "(<Property type=\"Financial\">상장 기업</Property> and <DateRange>2022-01-01-2022-12-31</DateRange> <Keyword>4 년 분기</Keyword> <Property type=\"Financial\">나이스/재무제표/IFRS/연결/표준/재무상태표/자본</Property>)"
+                    }
+                },
+                "subpods": [
+                    {
+                        "class": "Compiler:CompilationSucceeded",
+                        "position": -1,
+                        "title": "Compiler Output",
+                        "content": {
+                            "data": [
+                                "Compilation succeeded."
+                            ]
+                        },
+                        "subpods": []
+                    }
+                ]
+            },
+            {
+                "class": "Result:DataFrame",
+                "position": -1,
+                "title": "Result",
+                "content": {
+                    "index": [
+                        "symbol"
+                    ],
+                    "columns": [
+                        "symbol",
+                        "entity_name",
+                        "상장 기업",
+                        "자본 2022"
+                    ],
+                    "dtypes": {
+                        "symbol": "object",
+                        "entity_name": "object",
+                        "상장 기업": "string",
+                        "자본 2022": "object"
+                    },
+                    "data": {
+                        "symbol": [],
+                        "entity_name": [],
+                        "상장 기업": [],
+                        "자본 2022": []
+                    }
+                },
+                "subpods": [
+                    {
+                        "class": "Footnote:MarketStatus",
+                        "position": -1,
+                        "title": "Market Status",
+                        "content": {
+                            "status": "closed",
+                            "reference_time": "2022-10-25T15:30:00"
+                        },
+                        "subpods": []
+                    }
+                ]
+            }
+        ]
+    }
+}

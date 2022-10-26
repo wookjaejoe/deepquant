@@ -1,0 +1,111 @@
+{
+    "success": true,
+    "data": {
+        "profile": {
+            "compile": 77,
+            "interpreter": 88,
+            "pods": 61,
+            "total": 227
+        },
+        "exceptions": [],
+        "pods": [
+            {
+                "class": "Input",
+                "position": -1,
+                "title": "Input Interpretation",
+                "content": {
+                    "input": "상장 기업 and 당기순이익 2022년 3분기",
+                    "interpretation": {
+                        "plaintext": "(상장 기업 and 2022-01-01-2022-12-31 3 년 분기 당기순이익)",
+                        "tagged": "(<Property>상장 기업</Property> and <DateRange>2022-01-01-2022-12-31</DateRange> <Keyword>3 년 분기</Keyword> <Property>당기순이익</Property>)"
+                    },
+                    "detailed_interpretation": {
+                        "plaintext": "(상장 기업 and 2022-01-01-2022-12-31 3 년 분기 나이스/재무제표/IFRS/연결/표준/포괄손익계산서/당기순이익)",
+                        "tagged": "(<Property type=\"Financial\">상장 기업</Property> and <DateRange>2022-01-01-2022-12-31</DateRange> <Keyword>3 년 분기</Keyword> <Property type=\"Financial\">나이스/재무제표/IFRS/연결/표준/포괄손익계산서/당기순이익</Property>)"
+                    }
+                },
+                "subpods": [
+                    {
+                        "class": "Compiler:CompilationSucceeded",
+                        "position": -1,
+                        "title": "Compiler Output",
+                        "content": {
+                            "data": [
+                                "Compilation succeeded."
+                            ]
+                        },
+                        "subpods": []
+                    }
+                ]
+            },
+            {
+                "class": "Result:DataFrame",
+                "position": -1,
+                "title": "Result",
+                "content": {
+                    "index": [
+                        "symbol"
+                    ],
+                    "columns": [
+                        "symbol",
+                        "entity_name",
+                        "상장 기업",
+                        "당기순이익 2022"
+                    ],
+                    "dtypes": {
+                        "symbol": "string[pyarrow]",
+                        "entity_name": "string",
+                        "상장 기업": "string",
+                        "당기순이익 2022": "Int64"
+                    },
+                    "data": {
+                        "symbol": [
+                            "KRX:004310",
+                            "KRX:217600",
+                            "KRX:338100",
+                            "KRX:357120",
+                            "KRX:357250",
+                            "KRX:365550"
+                        ],
+                        "entity_name": [
+                            "현대약품",
+                            "켐온",
+                            "NH프라임리츠",
+                            "코람코에너지리츠",
+                            "미래에셋맵스리츠",
+                            "ESR켄달스퀘어리츠"
+                        ],
+                        "상장 기업": [
+                            "1",
+                            "2",
+                            "1",
+                            "1",
+                            "1",
+                            "1"
+                        ],
+                        "당기순이익 2022": [
+                            2419279000,
+                            1400642000,
+                            -1261978000,
+                            -9265828000,
+                            -1275160000,
+                            -25160289000
+                        ]
+                    }
+                },
+                "subpods": [
+                    {
+                        "class": "Footnote:MarketStatus",
+                        "position": -1,
+                        "title": "Market Status",
+                        "content": {
+                            "status": "closed",
+                            "reference_time": "2022-10-25T15:30:00"
+                        },
+                        "subpods": []
+                    }
+                ]
+            }
+        ]
+    }
+}
