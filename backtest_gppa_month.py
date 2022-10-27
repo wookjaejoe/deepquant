@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 from typing import *
 
 import pandas as pd
@@ -8,11 +8,16 @@ import repository.deepsearch as ds
 from repository import get_month_chart
 from repository.maria import corp
 
-g = []
-
 
 def year_month_to_str(year_month: Tuple[int, int]):
     return "/".join([str(v) for v in year_month])
+
+
+def normalize_year_month(year: int, month: int):
+    if month == 12:
+        return year, month
+    else:
+        return year + int(month / 12), month % 12
 
 
 criteria = 'GP/PA'
@@ -20,12 +25,9 @@ out_file = f'out-{datetime.now()}.csv'
 f = open(out_file, 'a', encoding='utf-8')
 
 
-def run(year: int, month: int):
-    before_year_month = (year, month)
-    if month == 12:
-        after_year_month = (year + 1, 1)
-    else:
-        after_year_month = (year, month + 1)
+def run(year: int, month: int, holding_period: int):
+    before_year_month = normalize_year_month(year, month)
+    after_year_month = normalize_year_month(year, month + holding_period)
 
     before = get_month_chart(*before_year_month)
     # 거래정지 종목 제거 - 거래 정지 여부 정확히 알수 없지만 아래 조건은 거래 정지 종목으로 보임
@@ -87,26 +89,37 @@ def run(year: int, month: int):
 
 
 def main():
-    # n년 지표데이터, 1년 수익율(n+2년 3월종가-n+1년 3월종가)
-    # 1996 - 2021
     fromyear = 2006
     toyear = 2022
     final_amount = 1
+    amount = {}
     for year in range(fromyear, toyear + 1):
         if year == 2006:
             months = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         else:
             months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
+        if year == date.today().year:
+            months = range(1, date.today().month + 1)
+
         for month in months:
             print(f"{year}년 {month}월")
-            df = run(year, month)
-            top = df[:10]
+            df = run(year, month, holding_period=1)
+            top = df[:10].sort_values(by=f"수익율", ascending=False)
             major_colums = ["GP/PA Rank", "name", "수익율"]
             top = top[major_colums + [col for col in top.columns if col not in major_colums]]
             final_amount = (final_amount * (top['수익율'].mean() + 1)).round(3)
             print(top)
             print(final_amount)
+
+            if len(amount) == 0:
+                amount.update({f"{year}년 {month}월": 1})
+
+            if month == 12:
+                amount.update({f"{year + 1}년 1월": final_amount.round(3)})
+            else:
+                amount.update({f"{year}년 {month + 1}월": final_amount.round(3)})
+
             f.write(
                 os.linesep.join(
                     [
@@ -119,6 +132,9 @@ def main():
                     ]
                 )
             )
+
+    for k, v in amount.items():
+        print(f"{k}, {v}")
 
 
 if __name__ == '__main__':
