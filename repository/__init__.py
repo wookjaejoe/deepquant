@@ -9,7 +9,11 @@ def get_month_chart(year: int, month: int):
     if len(result.index) != 0:
         return result
 
-    print("....")
+    # fixme: replace to logging
+    print("!" * 20)
+    print(f"Chart({year}/{month}) not found.")
+    print(f"Try fetching via pykrx.")
+    print("!" * 20)
 
     last_business_day = stock.get_previous_business_days(year=date.today().year, month=date.today().month)[-1].date()
     df = stock.get_market_cap(last_business_day.strftime('%Y%m%d'))
