@@ -80,21 +80,28 @@ def load_by_quart(title: str, year: int, quart: int):
     return _load(os.path.join(pre_queried_dir, title, f'{year}-{quart}.json'), title)
 
 
-# 1,2 - 작년3분기(11월 15일까지 발표), 작년2분기, 작년1분기, 제작년4분기
-# 3,4 - 작년 당기데이터 조회
-# 5,6,7 - 1분기(5월 15일까지 발표), 작년4분기, 작년3분기, 작년2분기 <- 이때도 당기 데이터 조회하면 코넥스 커버 가능
-# 8,9,10 - 2분기(8월 15일까지 발표), 1분기, 작년4분기, 작년3분기
-# 11,12 - 3분기(11월 15일까지 발표), 2분기, 1분기, 작년1분기
+# 1월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
+# 2월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
+# 3월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
+# 4월 - 작년 4Q, 3Q, 2Q, 1Q
+# 5월 - 작년 4Q, 3Q, 2Q, 1Q
+# 6월 - 1Q, 작년 4Q, 3Q, 2Q
+# 7월 - 1Q, 작년 4Q, 3Q, 2Q
+# 8월 - 1Q, 작년 4Q, 3Q, 2Q
+# 9월 - 2Q, 1Q, 작년 4Q, 3Q
+# 10월 - 2Q, 1Q, 작년 4Q, 3Q
+# 11월 - 2Q, 1Q, 작년 4Q, 3Q
+# 12월 - 3Q, 2Q, 1Q, 작년 4Q
 def load(title: str, year: int, month: int, num: int) -> Iterator[pandas.DataFrame]:
-    if month in [1, 2]:
+    if month in [1, 2, 3]:
         return [load_by_quart(title, q.year, q.quarter) for q in Quarter(year - 1, 3).iter_back(num)]
-    elif month in [3, 4]:
+    elif month in [4, 5]:
         return [load_by_quart(title, q.year, q.quarter) for q in Quarter(year - 1, 4).iter_back(num)]
-    elif month in [5, 6, 7]:
+    elif month in [6, 7, 8]:
         return [load_by_quart(title, q.year, q.quarter) for q in Quarter(year, 1).iter_back(num)]
-    elif month in [8, 9, 10]:
+    elif month in [9, 10, 11]:
         return [load_by_quart(title, q.year, q.quarter) for q in Quarter(year, 2).iter_back(num)]
-    elif month in [11, 12]:
+    elif month in [12]:
         return [load_by_quart(title, q.year, q.quarter) for q in Quarter(year, 3).iter_back(num)]
     else:
         raise Exception(f"Invalid month: {month}")
@@ -102,6 +109,7 @@ def load(title: str, year: int, month: int, num: int) -> Iterator[pandas.DataFra
 
 def load_one(title: str, year: int, month: int) -> pandas.DataFrame:
     return load(title, year, month, 1)[0]
+
 
 def validate():
     # fixme: 분기 재무데이터가 정상적인지를 당기 재무데이터로 검증

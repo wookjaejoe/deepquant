@@ -4,11 +4,8 @@ from base import YearMonth
 
 def main():
     GppaBackTest(
-        from_ym=YearMonth(2006, 3),
+        from_ym=YearMonth(2001, 4),
         to_ym=YearMonth.today().pre().pre(),
-        pw=1.9,
-        aw=0.9,
-        portfolio_size=10
     ).run()
 
 

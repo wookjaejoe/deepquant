@@ -36,8 +36,8 @@ class BackTestReport:
 
 # noinspection DuplicatedCode
 class GppaBackTest:
-    indicator = "GP/PA"
-    major_colums = [R(indicator), "name", "수익률"]
+    factor = "GP/PA"
+    major_colums = [R(factor), "name", "수익률"]
 
     def __init__(
         self,
@@ -75,7 +75,7 @@ class GppaBackTest:
             after = before
 
         # 변동율
-        change = ((after['close'] - before['close']) / before['close']).to_frame(name='수익률')
+        change = rate_of_return(before['close'], after['close']).to_frame(name='수익률')
 
         # before: o, after: x -> 거래정지
         only_left = before.index.join(after.index, how='outer').drop(before.index.join(after.index, how='right'))
@@ -93,8 +93,8 @@ class GppaBackTest:
         df.index.names = ['code']
         df['매출총이익'] = df['매출액'] - df['매출원가']
         df['GP/PA'] = df['매출총이익'] / ((before['cap'] ** self.pw) * (df['자산'] ** self.aw))
-        df_indi = df[self.indicator]
-        df = df.join(((df_indi - df_indi.mean()) / df_indi.std()).to_frame(P(self.indicator)))
+        df_factor = df[self.factor]
+        df = df.join(((df_factor - df_factor.mean()) / df_factor.std()).to_frame(P(self.factor)))
         df = df.join(before['close'].to_frame(f'매수가'))
         df = df.join(after['close'].to_frame(f'매도가'))
         df = df.join(before['cap'].to_frame(f'cap'))
@@ -111,11 +111,11 @@ class GppaBackTest:
         df = df.filter(items=filtered_index, axis=0)
 
         # Add ranking
-        df = df.join(df[self.indicator].rank(ascending=False).to_frame(R(self.indicator)))
+        df = df.join(df[self.factor].rank(ascending=False).to_frame(R(self.factor)))
         df['name'] = [corp.get_name(code) for code in df.index]
 
         df = df[self.major_colums + [col for col in df.columns if col not in self.major_colums]]
-        return df.sort_values(by=self.indicator, ascending=False)
+        return df.sort_values(by=self.factor, ascending=False)
 
     def run(self):
         my_amount, my_mdd = 1, 0
@@ -140,8 +140,10 @@ class GppaBackTest:
                 top_max = my_amount
 
             top_dd = my_amount / top_max - 1
-            if top_dd < my_mdd:
+            if my_mdd < top_dd:
                 my_mdd = top_dd
+
+            print(ym, my_amount)
 
         duration = self.from_ym.duration(self.to_ym)
         os.makedirs('.out', exist_ok=True)
@@ -165,33 +167,33 @@ class GppaBackTest:
         self.events.to_csv(".out/events.csv")
 
         # 지표 랭크별 수익률 평균
-        revenue_by_indicator_rank = pd.DataFrame()
+        revenue_by_factor_rank = pd.DataFrame()
         # 수익률 랭크별
         power_by_revenue_rank = pd.DataFrame()
 
         for i in range(self.portfolio_size):
             rank = i + 1
 
-            revenue_avg_per_indicator_rank = self.events[self.events[R(self.indicator)] == rank]['수익률'].mean()
-            revenue_by_indicator_rank = pd.concat(
+            revenue_avg_per_factor_rank = self.events[self.events[R(self.factor)] == rank]['수익률'].mean()
+            revenue_by_factor_rank = pd.concat(
                 [
-                    revenue_by_indicator_rank,
-                    pd.DataFrame({"AVG(수익율)": revenue_avg_per_indicator_rank}, index=[rank])
+                    revenue_by_factor_rank,
+                    pd.DataFrame({"AVG(수익율)": revenue_avg_per_factor_rank}, index=[rank])
                 ]
             )
 
-            power_avg_by_revenue_rank = self.events[self.events[R("수익률")] == rank][P(self.indicator)].mean()
+            power_avg_by_revenue_rank = self.events[self.events[R("수익률")] == rank][P(self.factor)].mean()
             power_by_revenue_rank = pd.concat(
                 [
                     power_by_revenue_rank,
-                    pd.DataFrame({f"AVG(P({self.indicator}))": power_avg_by_revenue_rank}, index=[rank])
+                    pd.DataFrame({f"AVG(P({self.factor}))": power_avg_by_revenue_rank}, index=[rank])
                 ]
             )
 
-        if revenue_by_indicator_rank is not None:
-            revenue_by_indicator_rank.to_csv(
-                ".out/revenue_by_indicator_rank.csv",
-                index_label=[f"R({self.indicator})"]
+        if revenue_by_factor_rank is not None:
+            revenue_by_factor_rank.to_csv(
+                ".out/revenue_by_factor_rank.csv",
+                index_label=[f"R({self.factor})"]
             )
 
         if power_by_revenue_rank is not None:
