@@ -1,15 +1,15 @@
-from backtest import GppaBackTest
-from base import YearMonth
+import pandas
+
+from core import Gppa
+from repository.maria.corp import get_name
+
+pandas.set_option('display.max_columns', None)
 
 
 def main():
-    today = YearMonth.today()
-    df = GppaBackTest(
-        from_ym=today,
-        to_ym=today,
-        portfolio_size=10
-    ).pick(ym=YearMonth.today())
-    print(df[:100].to_csv())
+    df = Gppa.calc()
+    df['name'] = [get_name(code) for code in df.index]
+    df[:30].to_csv(".out/pick.csv")
 
 
 if __name__ == '__main__':

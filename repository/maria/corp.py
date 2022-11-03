@@ -63,7 +63,14 @@ def fetch_all() -> Iterator[Corp]:
     return [Corp(code=record[0], name=record[1]) for record in cursor.fetchall()]
 
 
-_cache = {corp.code: corp for corp in fetch_all()}
+_cache: Dict[str, Corp] = {corp.code: corp for corp in fetch_all()}
+
+
+def get_holdings_corp() -> Iterator[Corp]:
+    for code, corp in _cache.items():
+        name = corp.name
+        if "지주" in name or "홀딩스" in name:
+            yield corp
 
 
 def get_name(code: str) -> str:

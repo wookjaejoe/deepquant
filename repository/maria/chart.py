@@ -17,6 +17,45 @@ class ChartSnapshot:
     cap: int
 
 
+def get_dates_in_chart(table_name: str, start: date, end: date) -> Iterator[date]:
+    with MariaConnection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""
+            select distinct date from {table_name}
+            where date >= '{start}' and date <= '{end}'
+            """
+        )
+
+    for row in cursor:
+        yield row[0]
+
+
+def get_bussness_months(start: date, end: date) -> Iterator[date]:
+    return get_dates_in_chart("month_chart", start, end)
+
+
+def get_bussness_dates(start: date, end: date) -> Iterator[date]:
+    return get_dates_in_chart("historical_chart", start, end)
+
+
+def get_day_chart(d: date) -> pandas.DataFrame:
+    chart_fields = [field.name for field in fields(ChartSnapshot)]
+    with MariaConnection() as conn:
+        cursor = conn.cursor()
+        query = f"""
+        select {", ".join(chart_fields)} from historical_chart
+        where date='{d}'
+        """
+        cursor.execute(query)
+
+    rows = list(cursor.fetchall())
+    result = pandas.DataFrame(rows, columns=chart_fields)
+    result.index = result['code']
+    result = result.drop('code', axis=1)
+    return result
+
+
 def get_month_chart(year: int, month: int) -> pandas.DataFrame:
     chart_fields = [field.name for field in fields(ChartSnapshot)]
     with MariaConnection() as conn:
@@ -108,7 +147,7 @@ def update_month_chart(year: int, month: int):
 
         values_text = ",\n".join(values)
         insert_query = f"""
-            insert ignore into month_chart
+            insert into month_chart
             values
             {values_text};
         """
