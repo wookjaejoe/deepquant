@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
-import pandas as pd
 from pymongo import MongoClient
 
 from config import config
-from datetime import datetime
 
 _logger = logging.getLogger(__file__)
 _client = MongoClient(config["mongo"]["url"])
@@ -23,6 +22,10 @@ class DsCollection:
     col = _client["finance"]["ds"]
 
     @classmethod
+    def exists(cls, title: str, year: int, quarter: int = None) -> bool:
+        return cls.col.count_documents({"_id": _id(title, year, quarter)}) > 0
+
+    @classmethod
     def insert_one(cls, raw: dict, title: str, year: int, quarter: int = None):
         assert quarter is None or quarter in [1, 2, 3, 4]
         # noinspection DuplicatedCode
@@ -35,7 +38,10 @@ class DsCollection:
         assert subpod['content']['data'][0] == 'Compilation succeeded.'
 
         raw["_id"] = _id(title, year, quarter)
-        raw["_updated"] = datetime.now()
+        raw["title"] = title
+        raw["year"] = year
+        raw["quarter"] = quarter
+        raw["updated"] = datetime.now()
         cls.col.insert_one(raw)
 
     @classmethod

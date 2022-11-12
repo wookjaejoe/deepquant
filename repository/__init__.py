@@ -1,6 +1,5 @@
 from .maria import chart
 from .maria.chart import get_bussness_dates, get_bussness_months
-from pykrx import stock
 from datetime import date
 from pandas import DataFrame
 
@@ -19,16 +18,8 @@ def _get_chart_via_pykrx(d: date):
 
 
 def get_day_chart(d: date):
-    result = chart.get_day_chart(d)
-    if len(result.index) != 0:
-        return result
-    else:
-        return _get_chart_via_pykrx(stock.get_previous_business_days(year=d.year, month=d.month)[-1])
+    return chart.get_day_chart(d)
 
 
 def get_month_chart(year: int, month: int):
-    result = chart.get_month_chart(year, month)
-    if len(result.index) != 0:
-        return result
-    else:
-        _get_chart_via_pykrx(stock.get_previous_business_days(year=year, month=month)[-1].date())
+    return chart.get_month_chart(year, month)

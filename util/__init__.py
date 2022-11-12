@@ -2,8 +2,12 @@ import pandas as pd
 from .time import YearMonth, Quarter
 
 
-def normalize(series: pd.Series) -> pd.Series:
-    return (series - series.mean()) / series.std()
+def normalize(series: pd.Series, based_zero: bool = False) -> pd.Series:
+    result = (series - series.mean()) / series.std()
+    if based_zero:
+        result = result + abs(min(result))
+
+    return result
 
 
 def cagr(initial: float, final: float, duration: float):

@@ -63,8 +63,13 @@ def load_by_quart(title: str, year: int, quarter: int) -> pandas.DataFrame:
     return _load(DsCollection.fetch_one(title, year, quarter), title)
 
 
-def load(title: str, year: int, month: int, num: int) -> Iterator[pandas.DataFrame]:
+def load_many(title: str, year: int, month: int, num: int) -> Iterator[pandas.DataFrame]:
     return [load_by_quart(title, q.year, q.quarter) for q in Quarter.last_confirmed(year, month).iter_back(num)]
+
+
+def load_and(title: str, year: int, month: int, num: int,
+             operator: Callable[Iterator[pandas.DataFrame], pandas.DataFrame]) -> pandas.DataFrame:
+    return operator(load_many(title, year, month, num))
 
 
 def load_one(title: str, year: int, month: int) -> pandas.DataFrame:

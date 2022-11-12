@@ -10,7 +10,7 @@ from datetime import datetime
 __debug = False
 
 DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
-LOG_FOLDER = os.path.abspath('logs')
+LOG_FOLDER = os.path.abspath('.log')
 os.makedirs(LOG_FOLDER, exist_ok=True)
 
 LOG_FORMAT_DETAILS = '%(name)s, %(asctime)s, %(levelname)-8s, %(message)s'

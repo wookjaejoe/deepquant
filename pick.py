@@ -1,13 +1,13 @@
 import pandas
 
-from core import Gppa
+from core import GPPA
 from repository.maria.corp import get_name
 
 pandas.set_option('display.max_columns', None)
 
 
 def main():
-    df = Gppa.calc()
+    df = GPPA.calc()
     df['name'] = [get_name(code) for code in df.index]
     df[:30].to_csv(".out/pick.csv")
 
