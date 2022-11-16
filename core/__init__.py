@@ -1,2 +1,2 @@
-from .gppa import GPPA
+from .gpap import GPAP
 from .factor import QuantFactor
