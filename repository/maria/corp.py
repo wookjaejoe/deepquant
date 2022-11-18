@@ -55,7 +55,7 @@ def upload_all_corp_from_pre_queried():
         connection.commit()
 
 
-def fetch_all() -> Iterator[Corp]:
+def refetch_all() -> Iterator[Corp]:
     with MariaConnection() as connection:
         cursor = connection.cursor()
         cursor.execute("SELECT * from corp")
@@ -63,7 +63,11 @@ def fetch_all() -> Iterator[Corp]:
     return [Corp(code=record[0], name=record[1]) for record in cursor.fetchall()]
 
 
-_cache: Dict[str, Corp] = {corp.code: corp for corp in fetch_all()}
+_cache: Dict[str, Corp] = {corp.code: corp for corp in refetch_all()}
+
+
+def get_corps() -> Iterator[Corp]:
+    return [v for v in _cache.values()]
 
 
 def get_holdings_corp() -> Iterator[Corp]:

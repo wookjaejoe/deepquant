@@ -27,8 +27,10 @@ def get_dates_in_chart(table_name: str, start: date, end: date) -> Iterator[date
             """
         )
 
-    for row in cursor:
-        yield row[0]
+        for row in cursor:
+            yield row[0]
+
+        cursor.close()
 
 
 def get_bussness_months(start: date, end: date) -> Iterator[date]:
@@ -48,8 +50,9 @@ def get_day_chart(d: date) -> pandas.DataFrame:
         where date='{d}'
         """
         cursor.execute(query)
+        rows = list(cursor.fetchall())
+        cursor.close()
 
-    rows = list(cursor.fetchall())
     result = pandas.DataFrame(rows, columns=chart_fields)
     result.index = result['code']
     result = result.drop('code', axis=1)
@@ -66,8 +69,9 @@ def get_month_chart(year: int, month: int) -> pandas.DataFrame:
             where year(date) = {year} and month(date) = {month}
             """
         )
+        rows = list(cursor.fetchall())
+        cursor.close()
 
-    rows = list(cursor.fetchall())
     result = pandas.DataFrame(rows, columns=chart_fields)
     result.index = result['code']
     result = result.drop('code', axis=1)
@@ -94,8 +98,10 @@ def _snapshot(year: int, month: int) -> Iterator[Tuple]:
             """
         )
 
-    for record in cursor.fetchall():
-        yield record
+        for record in cursor.fetchall():
+            yield record
+
+        cursor.close()
 
 
 def snapshot_iterator(year: int, month: int) -> Iterator[ChartSnapshot]:
