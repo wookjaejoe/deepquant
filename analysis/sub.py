@@ -1,6 +1,6 @@
 import pandas as pd
 
-from util import normalize
+from base import normalize
 
 
 def calc_factor(df, pk, pw, bk, bw):

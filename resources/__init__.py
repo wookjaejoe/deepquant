@@ -1,3 +1,5 @@
 import os
 
-pre_queried_dir = os.path.join(os.path.dirname(__file__), "pre_queried")
+
+def get_resource(*subpath: str) -> str:
+    return os.path.join(os.path.dirname(__file__), *subpath)

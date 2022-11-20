@@ -1,25 +1,21 @@
+from __future__ import annotations
+
+import pandas as pd
+
+from resources import get_resource
 from .maria import chart
-from .maria.chart import get_bussness_dates, get_bussness_months
-from datetime import date
-from pandas import DataFrame
 
 
-# fixme: deprecated
-def _get_chart_via_pykrx(d: date):
-    print("!" * 20)
-    print(f"Try fetching via pykrx.")
-    print("!" * 20)
+class Delisted:
+    df: pd.DataFrame
+    COLNAME_CODE = "종목코드"
+    COLNAME_DATE = "폐지일자"
 
-    df = stock.get_market_cap(d.strftime('%Y%m%d'))
-    result = DataFrame(index=df.index)
-    result = result.join(df['종가'].to_frame('close'))
-    result = result.join(df['거래량'].to_frame('vol'))
-    return result.join(df['시가총액'].to_frame('cap'))
-
-
-def get_day_chart(d: date):
-    return chart.get_day_chart(d)
+    @classmethod
+    def reload(cls):
+        cls.df = pd.read_csv(get_resource("상장폐지종목.csv"))
+        cls.df[cls.COLNAME_CODE] = cls.df[cls.COLNAME_CODE].apply(lambda x: str(x).ljust(6, "0"))
+        cls.df[cls.COLNAME_DATE] = pd.to_datetime(cls.df[cls.COLNAME_DATE], format="%Y-%m-%d")
 
 
-def get_month_chart(year: int, month: int):
-    return chart.get_month_chart(year, month)
+Delisted.reload()

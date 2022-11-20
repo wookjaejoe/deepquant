@@ -109,7 +109,7 @@ def fetch_all(year: int, report_code: ReportCode):
         # assert response.status_code == 200, f'Response code not 200, actual - {response.status_code}'
         # assert content
         # assert DartResponseStatus.is_ok(content)
-        print(corp.code, corp.name, content["status"], content["message"])
+        print(corp.code, corp.ver, content["status"], content["message"])
         with open(filepath, "w") as f:
             json.dump(content, f)
 

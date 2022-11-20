@@ -11,8 +11,8 @@ from repository import rt
 from .factor import QuantFactor
 
 
-class PEP(QuantFactor):
-    name = "PEP"
+class Factor(QuantFactor):
+    ver = "v3"
 
     @classmethod
     def calc(
@@ -31,6 +31,6 @@ class PEP(QuantFactor):
         else:
             df = df.join(get_day_chart(day)["cap"].to_frame("cap"))
 
-        df[cls.name] = pow(df["매출총이익"], 0.125) / pow(df["자산"], 0.125) / df["cap"]
+        df["factor"] = pow(df["매출총이익"] / df["자산"], 0.125) / df["cap"]
         df = df.replace([np.inf, -np.inf], np.nan)
-        return df.sort_values(by=cls.name, ascending=False)
+        return df.sort_values(by="factor", ascending=False)

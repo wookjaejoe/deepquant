@@ -1,4 +1,4 @@
-from util import log
+from base import log
 
 log.init()
 
@@ -6,7 +6,7 @@ from repository import deepsearch
 from repository.mongo import DsCollection
 import time
 import logging
-from util import Quarter
+from base import Quarter
 from datetime import date
 
 

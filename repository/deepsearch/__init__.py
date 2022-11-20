@@ -8,7 +8,7 @@ from requests import get
 
 from config import config
 from repository.mongo import DsCollection
-from util import Quarter
+from base import Quarter
 
 _logger = logging.getLogger(__file__)
 

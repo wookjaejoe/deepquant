@@ -1,8 +1,15 @@
-from .conn import MariaConnection
-from typing import *
 from dataclasses import dataclass, fields
 from datetime import date
-import pandas
+from typing import *
+
+import pandas as pd
+
+from base.time import YearMonth
+from .conn import MariaConnection, maria_home
+from base.cache import cache_file as cache_file
+import sqlite3
+
+TABLE_HISTORICAL_CHART = "historical_chart"
 
 
 @dataclass
@@ -33,15 +40,11 @@ def get_dates_in_chart(table_name: str, start: date, end: date) -> Iterator[date
         cursor.close()
 
 
-def get_bussness_months(start: date, end: date) -> Iterator[date]:
-    return get_dates_in_chart("month_chart", start, end)
-
-
 def get_bussness_dates(start: date, end: date) -> Iterator[date]:
-    return get_dates_in_chart("historical_chart", start, end)
+    return get_dates_in_chart(TABLE_HISTORICAL_CHART, start, end)
 
 
-def get_day_chart(d: date) -> pandas.DataFrame:
+def get_day_chart(d: date) -> pd.DataFrame:
     chart_fields = [field.name for field in fields(ChartSnapshot)]
     with MariaConnection() as conn:
         cursor = conn.cursor()
@@ -53,110 +56,42 @@ def get_day_chart(d: date) -> pandas.DataFrame:
         rows = list(cursor.fetchall())
         cursor.close()
 
-    result = pandas.DataFrame(rows, columns=chart_fields)
+    result = pd.DataFrame(rows, columns=chart_fields)
     result.index = result['code']
     result = result.drop('code', axis=1)
     return result
 
 
-def get_month_chart(year: int, month: int) -> pandas.DataFrame:
-    chart_fields = [field.name for field in fields(ChartSnapshot)]
-    with MariaConnection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            f"""
-            select {", ".join(chart_fields)} from month_chart
-            where year(date) = {year} and month(date) = {month}
-            """
-        )
-        rows = list(cursor.fetchall())
-        cursor.close()
-
-    result = pandas.DataFrame(rows, columns=chart_fields)
-    result.index = result['code']
-    result = result.drop('code', axis=1)
-    return result
-
-
-def _snapshot(year: int, month: int) -> Iterator[Tuple]:
-    with MariaConnection() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            f"""
-            SELECT code,
-                   MAX(date)                                                                 as date,
-                   cast(SUBSTRING_INDEX(MIN(CONCAT(date, '_', open)), '_', -1) as unsigned)  as open,
-                   cast(MAX(high) as unsigned)                                               as high,
-                   cast(MIN(low) as unsigned)                                                as low,
-                   cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned) as close,
-                   cast(SUM(vol) as unsigned)                                                as vol,
-                   cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   AS cap
-            FROM historical_chart
-            where year(date) = {year} and month(date) = {month}
-            group by code, year(date), month(date)
-            order by date;
-            """
-        )
-
-        for record in cursor.fetchall():
-            yield record
-
-        cursor.close()
-
-
-def snapshot_iterator(year: int, month: int) -> Iterator[ChartSnapshot]:
-    for record in _snapshot(year, month):
-        yield ChartSnapshot(
-            code=record[0],
-            date=record[1],
-            open=record[2],
-            high=record[3],
-            low=record[4],
-            close=record[5],
-            vol=record[6],
-            cap=record[7]
-        )
-
-
-def snapshot_dataframe(year: int, month: int) -> pandas.DataFrame:
-    result = pandas.DataFrame([snap.__dict__ for snap in snapshot_iterator(year, month)])
-    result.index = result['code']
-    result = result.drop('code', axis=1)
-    return result
-
-
-def update_all_month_chart():
-    """
-    1996-01 부터 지난달까지 월 차트를 만들어 저장
-    """
-    today = date.today()
-    year_month_list = []
-    for year in range(2022, today.year + 1):
-        if year == today.year:
-            month_end = today.month - 1
-        else:
-            month_end = 12
-
-        for month in range(1, month_end + 1):
-            year_month_list.append((year, month))
-
-    for year, month in year_month_list:
-        update_month_chart(year, month)
-
-
-def update_month_chart(year: int, month: int):
-    print(f'Updating month_chart({year}/{month})')
-    with MariaConnection() as connection:
-        cursor = connection.cursor()
-        values = [f"""('{row[0]}', '{row[1]}', {row[2]}, {row[3]}, {row[4]}, {row[5]}, {row[6]}, {row[7]})"""
-                  for row in _snapshot(year, month)]
-
-        values_text = ",\n".join(values)
-        insert_query = f"""
-            insert into month_chart
-            values
-            {values_text};
+def month_chart(begin: YearMonth, end: YearMonth) -> pd.DataFrame:
+    def _query(year: int, month: int):
+        return f"""
+        SELECT code,
+           MAX(date)                                                                 as date,
+           cast(SUBSTRING_INDEX(MIN(CONCAT(date, '_', open)), '_', -1) as unsigned)  as open,
+           cast(MAX(high) as unsigned)                                               as high,
+           cast(MIN(low) as unsigned)                                                as low,
+           cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned) as close,
+           cast(SUM(vol) as unsigned)                                                as vol,
+           cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   AS cap
+        FROM historical_chart
+        where year(date) = {year} and month(date) = {month}
+        group by code, year(date), month(date)
+        order by date;
         """
-        n = cursor.execute(insert_query)
-        print(f"{n} rows updated")
-        connection.commit()
+
+    cache = cache_file("cache.db")
+    with sqlite3.connect(cache) as cache_db:
+        try:
+            result = pd.read_sql("select * from month_chart", cache_db)
+        except:
+            cache_db.execute("drop table if exists month_chart;")
+            result = pd.DataFrame()
+            for ym in begin.iter(end):
+                print(ym)
+                df = pd.read_sql(_query(ym.year, ym.month), maria_home())
+                result = pd.concat([result, df])
+
+            result.to_sql("month_chart", cache_db, index=False)
+            result = pd.read_sql("select * from month_chart", cache_db)
+
+    return result
