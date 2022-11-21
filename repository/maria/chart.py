@@ -62,7 +62,7 @@ def get_day_chart(d: date) -> pd.DataFrame:
     return result
 
 
-def month_chart(begin: YearMonth, end: YearMonth) -> pd.DataFrame:
+def upload_month_chart():
     def _query(year: int, month: int):
         return f"""
         SELECT code,
@@ -79,19 +79,12 @@ def month_chart(begin: YearMonth, end: YearMonth) -> pd.DataFrame:
         order by date;
         """
 
-    cache = cache_file("cache.db")
-    with sqlite3.connect(cache) as cache_db:
-        try:
-            result = pd.read_sql("select * from month_chart", cache_db)
-        except:
-            cache_db.execute("drop table if exists month_chart;")
-            result = pd.DataFrame()
-            for ym in begin.iter(end):
-                print(ym)
-                df = pd.read_sql(_query(ym.year, ym.month), maria_home())
-                result = pd.concat([result, df])
+    yms = set([YearMonth.of(d) for d in get_bussness_dates(date(1996, 1, 1), date(2022, 10, 31))])
+    engine = maria_home()
+    result = pd.DataFrame()
+    for ym in min(yms).iter(max(yms)):
+        print(ym)
+        df = pd.read_sql(_query(ym.year, ym.month), maria_home())
+        result = pd.concat([result, df])
 
-            result.to_sql("month_chart", cache_db, index=False)
-            result = pd.read_sql("select * from month_chart", cache_db)
-
-    return result
+    result.to_sql("_month_chart", engine, index=False)
