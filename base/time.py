@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import *
 from datetime import date
 from abc import ABCMeta
+import calendar
 
 
 class Comparable(metaclass=ABCMeta):
@@ -97,9 +98,19 @@ class YearMonth(Comparable):
     month: int
 
     @staticmethod
+    def of(date_: date):
+        return YearMonth(date_.year, date_.month)
+
+    @staticmethod
     def today():
         today = date.today()
         return YearMonth(today.year, today.month)
+
+    def first_date(self) -> date:
+        return date(self.year, self.month, 1)
+
+    def last_date(self) -> date:
+        return date(self.year, self.month, calendar.monthrange(self.year, self.month)[1])
 
     def pre(self):
         if self.month == 1:
@@ -140,3 +151,6 @@ class YearMonth(Comparable):
 
     def __str__(self):
         return "-".join([str(self.year).ljust(4, "0"), str(self.month).rjust(2, "0")])
+
+    def __hash__(self):
+        return hash(self.value())
