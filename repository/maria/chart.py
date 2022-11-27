@@ -6,8 +6,6 @@ import pandas as pd
 
 from base.time import YearMonth
 from .conn import MariaConnection, maria_home
-from base.cache import cache_file as cache_file
-import sqlite3
 
 TABLE_HISTORICAL_CHART = "historical_chart"
 
@@ -56,10 +54,15 @@ def get_day_chart(d: date) -> pd.DataFrame:
         rows = list(cursor.fetchall())
         cursor.close()
 
-    result = pd.DataFrame(rows, columns=chart_fields)
-    result.index = result['code']
-    result = result.drop('code', axis=1)
-    return result
+    return pd.DataFrame(rows, columns=chart_fields).set_index("code")
+
+
+def get_month_chart(year: int, month: int) -> pd.DataFrame:
+    print(f"select * from month_chart where year(date) = {year} and month(date) = {month};")
+    return pd.read_sql(
+        sql=f"select * from month_chart where year(date) = {year} and month(date) = {month};",
+        con=maria_home()
+    )
 
 
 def upload_month_chart():
