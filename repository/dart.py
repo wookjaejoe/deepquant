@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import json
-import jsons
 import os
 import zipfile
 from dataclasses import dataclass
 from enum import Enum
 from typing import *
 
+import pandas as pd
 import xmltodict
 from requests import get
 
 from config import config
 from repository import maria
-import pandas as pd
 
 crtfc_key = config["dart"]["crtfc_key"]
 

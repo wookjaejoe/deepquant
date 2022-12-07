@@ -65,29 +65,30 @@ def get_month_chart(year: int, month: int) -> pd.DataFrame:
     )
 
 
-def upload_month_chart():
-    def _query(year: int, month: int):
-        return f"""
-        SELECT code,
-           MAX(date)                                                                 as date,
-           cast(SUBSTRING_INDEX(MIN(CONCAT(date, '_', open)), '_', -1) as unsigned)  as open,
-           cast(MAX(high) as unsigned)                                               as high,
-           cast(MIN(low) as unsigned)                                                as low,
-           cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned) as close,
-           cast(SUM(vol) as unsigned)                                                as vol,
-           cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   AS cap
-        FROM historical_chart
-        where year(date) = {year} and month(date) = {month}
-        group by code, year(date), month(date)
-        order by date;
-        """
+def _query_month_chart(year: int, month: int):
+    return f"""
+    SELECT code,
+       MAX(date)                                                                 as date,
+       cast(SUBSTRING_INDEX(MIN(CONCAT(date, '_', open)), '_', -1) as unsigned)  as open,
+       cast(MAX(high) as unsigned)                                               as high,
+       cast(MIN(low) as unsigned)                                                as low,
+       cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned) as close,
+       cast(SUM(vol) as unsigned)                                                as vol,
+       cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   AS cap
+    FROM historical_chart
+    where year(date) = {year} and month(date) = {month}
+    group by code, year(date), month(date)
+    order by date;
+    """
 
-    yms = set([YearMonth.of(d) for d in get_bussness_dates(date(1996, 1, 1), date(2022, 10, 31))])
-    engine = maria_home()
+
+def upload_month_chart():
+    dates = pd.read_sql("select distinct date from historical_chart", maria_home())["date"]
+    yms = sorted({YearMonth.of(d) for d in dates})
+    assert len(yms) == len(set(yms))
     result = pd.DataFrame()
     for ym in min(yms).iter(max(yms)):
         print(ym)
-        df = pd.read_sql(_query(ym.year, ym.month), maria_home())
-        result = pd.concat([result, df])
+        result = pd.concat([result, pd.read_sql(_query_month_chart(ym.year, ym.month), maria_home())])
 
-    result.to_sql("_month_chart", engine, index=False)
+    result.to_sql("month_chart", maria_home(), index=False)
