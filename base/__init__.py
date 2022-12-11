@@ -1,7 +1,12 @@
-import pandas as pd
-from .time import YearMonth, Quarter
-from typing import *
 from datetime import date
+from typing import *
+
+import pandas as pd
+
+
+def power(series: pd.Series):
+    norm = normalize(series)
+    return norm / (norm.max() - norm.min())
 
 
 def normalize(series: pd.Series, based_zero: bool = False) -> pd.Series:

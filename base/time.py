@@ -102,6 +102,12 @@ class YearMonth(Comparable):
         return YearMonth(date_.year, date_.month)
 
     @staticmethod
+    def from_string(s: str):
+        sp = s.split("-")
+        assert len(sp) == 2
+        return YearMonth(int(sp[0]), int(sp[1]))
+
+    @staticmethod
     def today():
         today = date.today()
         return YearMonth(today.year, today.month)

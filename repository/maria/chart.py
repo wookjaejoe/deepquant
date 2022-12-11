@@ -74,7 +74,8 @@ def _query_month_chart(year: int, month: int):
        cast(MIN(low) as unsigned)                                                as low,
        cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned) as close,
        cast(SUM(vol) as unsigned)                                                as vol,
-       cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   AS cap
+       cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', vol)), '_', -1) as unsigned)   as vol_lastday,
+       cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)   as cap
     FROM historical_chart
     where year(date) = {year} and month(date) = {month}
     group by code, year(date), month(date)
