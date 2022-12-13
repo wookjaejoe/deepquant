@@ -4,15 +4,13 @@ from typing import *
 import pandas as pd
 
 
-def power(series: pd.Series):
-    norm = normalize(series)
-    return norm / (norm.max() - norm.min())
-
+def rate(before, after):
+    return (after - before) / before
 
 def normalize(series: pd.Series, based_zero: bool = False) -> pd.Series:
     result = (series - series.mean()) / series.std()
     if based_zero:
-        result = result + abs(min(result))
+        result = result - min(result)
 
     return result
 
