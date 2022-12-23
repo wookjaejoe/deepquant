@@ -1,0 +1,17 @@
+{
+  "deepSearchAuth": "Basic ",
+  "maria": {
+    "host": "",
+    "username": "",
+    "password": ""
+  },
+  "mongo": {
+    "url": ""
+  },
+  "stockrt": {
+    "url": ""
+  },
+  "dart": {
+    "crtfc_key": ""
+  }
+}

@@ -1,11 +1,14 @@
 from datetime import date
 from typing import *
 
+import numpy as np
 import pandas as pd
 
 
-def rate(before, after):
-    return (after - before) / before
+def xox(x1, x2):
+    # fixme: x1 > 0 아니더라도 계산 가능한 경우가 있을 듯
+    return (x2 - x1) / abs(x1)
+
 
 def normalize(series: pd.Series, based_zero: bool = False) -> pd.Series:
     result = (series - series.mean()) / series.std()
@@ -40,10 +43,6 @@ def mdd(dates: List[date], values: List[float]):
             _mdd_section = (max_date, _date)
 
     return _mdd, _mdd_section
-
-
-def rate_of_return(initial: float, final: float):
-    return (final - initial) / initial
 
 
 def N(target: str):

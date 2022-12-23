@@ -36,22 +36,41 @@ class Quarter(Comparable):
     def __str__(self):
         return f"{self.year}-{self.quarter}Q"
 
-    def pre(self):
+    def pre(self) -> Quarter:
         if self.quarter == 1:
             return Quarter(self.year - 1, 4)
         else:
             return Quarter(self.year, self.quarter - 1)
 
-    def minus(self, quarter: int) -> Quarter:
+    def next(self) -> Quarter:
+        if self.quarter == 4:
+            return Quarter(self.year + 1, 1)
+        else:
+            return Quarter(self.year, self.quarter + 1)
+
+    def minus(self, num: int) -> Quarter:
         result = self
-        for quarter in range(quarter):
+        for _ in range(num):
             result = result.pre()
+
+        return result
+
+    def plus(self, num: int) -> Quarter:
+        result = self
+        for num in range(num):
+            result = result.next()
 
         return result
 
     def iter_back(self, count) -> Iterator[Quarter]:
         for i in range(count):
             yield self.minus(i)
+
+    def to(self, to: Quarter):
+        q = self
+        while to.value() >= q.value():
+            yield q
+            q = q.next()
 
     @staticmethod
     def today():

@@ -10,7 +10,7 @@ from config import config
 
 
 @dataclass
-class StockRt:
+class StockCurrent:
     code: str
     name: str
     price: int
@@ -20,26 +20,26 @@ class StockRt:
     status_kind: str
 
 
-def fetch_all() -> List[StockRt]:
+def fetch_all() -> List[StockCurrent]:
     async def _fetch():
         async with websockets.connect(config['stockrt']["url"]) as websocket:
-            return jsons.loads(await websocket.recv(), List[StockRt])
+            return jsons.loads(await websocket.recv(), List[StockCurrent])
 
     return asyncio.run(_fetch())
 
 
-async def _subscribe_async(on_next: Callable[StockRt, None]):
+async def subscribe(on_next: Callable[StockCurrent, None]):
     async with websockets.connect(config['stockrt']["url"] + "/subscribe") as websocket:
         while True:
-            on_next(jsons.loads(await websocket.recv(), StockRt))
+            on_next(jsons.loads(await websocket.recv(), StockCurrent))
 
 
-def _subscribe_sync(on_next: Callable[StockRt, None]):
-    asyncio.run(_subscribe_async(on_next))
+def _subscribe_sync(on_next: Callable[StockCurrent, None]):
+    asyncio.run(subscribe(on_next))
 
 
 class StockRtSubscriber(Thread):
-    def __init__(self, on_next: Callable[StockRt, None]):
+    def __init__(self, on_next: Callable[StockCurrent, None]):
         super().__init__()
         self.on_next = on_next
 
