@@ -17,10 +17,20 @@ def parse_req(url: str):
 
 
 class WebSocketServer:
-    major_columns = ["code", "name", "price", "P", "control_kind", "supervision_kind", "status_kind"]
-    major_columns += ["rws", "super", "super_rank"]
-    major_columns += DataProvider.recipe.keys()
-    major_columns += [f"{k}_rank" for k in DataProvider.recipe.keys()]
+    major_colums = [
+        "code",
+        "name",
+        "exchange",
+        "price",
+        "P",
+        "control_kind",
+        "supervision_kind",
+        "status_kind",
+        "super",
+        "super_rank",
+        *DataProvider.recipe.keys(),
+        *[f"{k}_rank" for k in DataProvider.recipe.keys()]
+    ]
 
     def __init__(
         self,
@@ -42,7 +52,7 @@ class WebSocketServer:
         table["확정실적"] = str(table["확정실적"])
         table["code"] = table.index
         table = table[WebSocketServer.major_columns]
-        res = jsons.dumps(table.T.to_dict().values(), allow_nan=False)
+        res = jsons.dumps(table.T.to_dict().values(), allow_nan=False)  # fixme: allow_nan 뭔지 확인
         await session.send(res)
 
     # noinspection PyTypeChecker
@@ -53,13 +63,13 @@ class WebSocketServer:
             if url.path.endswith("/head"):
                 await self.send_head(session, parse_qs(url.query))
 
-            # async for _ in session:
-            #     pass  # 세션 유지
+            await session.wait_closed()
         except BaseException as e:
             _logger.warning(str(e))
 
     async def serve(self):
         await websockets.serve(self._on_connect, "0.0.0.0", self.port)
+        # todo: publish to subscribers
 
     def init(self):
         self.data_provider.init()

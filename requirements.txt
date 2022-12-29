@@ -1,13 +1,12 @@
-pandas~=1.5.1
+pandas==1.5.2
 requests~=2.28.1
 pykrx==1.0.39
 matplotlib==3.6.2
-sqlalchemy~=1.4.42
-datetime~=4.7
+sqlalchemy==1.4.45
 pymysql~=1.0.2
-numpy~=1.23.4
+numpy==1.24.1
 websockets~=10.4
 jsons~=1.6.3
-pymongo~=4.3.2
+pymongo==4.3.3
 xmltodict~=0.13.0
 scipy~=1.9.3

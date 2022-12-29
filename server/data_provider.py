@@ -17,8 +17,8 @@ logger = logging.getLogger("DataProvider")
 
 class DataProvider:
     recipe = {
-        "GP/P": 10,
-        "1/P": 24,
+        "GP/P": 5,
+        "1/P": 10,
 
         "GP_YoY": 1,
         "GP_QoQ": 2,
@@ -34,8 +34,7 @@ class DataProvider:
 
     def calc_super(self, factor: str, factor_analysis: pd.Series):
         factor_weight = pow(-factor_analysis["spearman"] * factor_analysis["h5"], 1)
-        print(factor, factor_weight)
-        return self.table[f"{factor}_power"] * factor_weight
+        return self.table[f"{factor}_rank"] * factor_weight
 
     def rerank(self):
         factors = ["GP_YoY", "GP_QoQ", "O_YoY", "O_QoQ"]
@@ -59,22 +58,19 @@ class DataProvider:
 
         for factor in factors:
             colname_rank = f"{factor}_rank"
-            colname_power = f"{factor}_power"
             self.table[colname_rank] = \
                 np.ceil(self.table[factor].rank(ascending=False, method="min", pct=True) * rank_scale)
-            self.table[colname_power] = (self.table[factor] - self.table[factor].mean()) / self.table[factor].std()
 
         # factor - super
-        factors.append("super")
-        factor = f"super"
-        self.table[f"rws"] = sum([self.table[f"{k}_rank"] * v for k, v in DataProvider.recipe.items()])
+        factor = "super"
+        factors.append(factor)
         self.table[factor] = 1 / sum([self.table[f"{k}_rank"] * v for k, v in DataProvider.recipe.items()]) * 100
         self.table[f"{factor}_rank"] = \
             np.ceil(self.table[factor].rank(ascending=False, method="min", pct=True) * rank_scale)
 
         self.table = self.table[~self.table["name"].str.endswith("홀딩스")]
         self.table = self.table[~self.table["name"].str.endswith("지주")]
-        self.table = self.table.sort_values("super", ascending=False)
+        self.table = self.table.sort_values(factor, ascending=False)
         self.table.to_csv("pick.csv")
 
     async def init_table(self):
@@ -105,8 +101,8 @@ class DataProvider:
 
             buffer = {}
             while not self.queue.empty():
-                item = await self.queue.get()
-                buffer.update({item["code"]: item})
+                items = await self.queue.get()
+                buffer.update({item["code"]: item for item in items})
 
             logger.info(f"Updating table for {len(buffer)} records...")
             new_data = pd.DataFrame(buffer.values()).set_index("code")
@@ -117,9 +113,9 @@ class DataProvider:
         """
         Stock RT 서버로부터 시세 변경 이벤트를 지속 수신하고 큐에 담는다.
         """
-        print("Connecting to StockRT server...")
+        logger.info("Connecting to StockRT server...")
         dest = config['stockrt']["url"] + "/subscribe"
-        websocket = await asyncio.wait_for(websockets.connect(dest), timeout=1)
+        websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
 
         while True:
             data = await websocket.recv()
