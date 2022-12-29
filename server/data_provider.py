@@ -1,6 +1,6 @@
 import asyncio
+import logging
 from datetime import date
-from typing import *
 
 import jsons
 import numpy as np
@@ -9,9 +9,10 @@ import websockets
 
 from config import config
 from repository import load_financial
-from repository.rt import StockCurrent
 
 rank_scale = 100
+
+logger = logging.getLogger("DataProvider")
 
 
 class DataProvider:
@@ -74,11 +75,12 @@ class DataProvider:
         self.table = self.table[~self.table["name"].str.endswith("홀딩스")]
         self.table = self.table[~self.table["name"].str.endswith("지주")]
         self.table = self.table.sort_values("super", ascending=False)
+        self.table.to_csv("pick.csv")
 
     async def init_table(self):
         dest = config['stockrt']["url"]
         ws = await asyncio.wait_for(websockets.connect(dest), timeout=10)
-        stocks = jsons.loads(await ws.recv(), List[StockCurrent])
+        stocks = jsons.loads(await ws.recv())
         today = date.today()
         self.table = pd.DataFrame(stocks).set_index("code")
         self.table = self.table.join(load_financial(today.year, today.month))
@@ -97,19 +99,19 @@ class DataProvider:
         시세 변경 사항 큐에 담긴 항목들을 모두 꺼내 처리함.
         """
         while True:
-            buffer = []
-            while True:
-                try:
-                    buffer.append(self.queue.get_nowait())
-                except asyncio.QueueEmpty:
-                    break
+            if self.queue.empty():
+                await asyncio.sleep(1)
+                continue
 
-            if buffer:
-                new_data = pd.DataFrame(buffer).set_index("code")
-                self.table.update(new_data)
-                self.rerank()
+            buffer = {}
+            while not self.queue.empty():
+                item = await self.queue.get()
+                buffer.update({item["code"]: item})
 
-            await asyncio.sleep(1)
+            logger.info(f"Updating table for {len(buffer)} records...")
+            new_data = pd.DataFrame(buffer.values()).set_index("code")
+            self.table.update(new_data)
+            self.rerank()
 
     async def listen(self):
         """
@@ -121,8 +123,8 @@ class DataProvider:
 
         while True:
             data = await websocket.recv()
-            data = jsons.loads(data, StockCurrent)
-            self.queue.put_nowait(data)
+            data = jsons.loads(data)
+            await self.queue.put(data)
 
     def init(self):
         self.loop.run_until_complete(self.init_table())
