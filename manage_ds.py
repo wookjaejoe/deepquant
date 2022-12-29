@@ -12,8 +12,19 @@ titles = [
     "자본총계", "자산총계", "부채총계",
     "매출액", "매출총이익", "영업이익", "당기순이익",
     "영업활동으로인한현금흐름",
-    "EBITDA", "총차입금", "현금및현금성자산"
 ]
+
+
+def fetch_and_update(title: str, year: int, quarter: int):
+    # fetch
+    content = ds.query(title, year, quarter)
+    # insert
+    DsCollection.insert_one(
+        content,
+        title=title,
+        year=year,
+        quarter=quarter
+    )
 
 
 def main():
@@ -28,16 +39,12 @@ def main():
         title = query_item[0]
         quarter = query_item[1]
         print(f"[{count}/{len(query_list)}]", title, quarter)
-        # fetch
-        content = ds.query(title, quarter.year, quarter.quarter)
-        # insert
-        DsCollection.insert_one(
-            content,
-            title=title,
-            year=quarter.year,
-            quarter=quarter.quarter
-        )
-        time.sleep(1)
+
+        try:
+            fetch_and_update(title, quarter.year, quarter.quarter)
+        except:
+            time.sleep(5)
+            fetch_and_update(title, quarter.year, quarter.quarter)
 
 
 if __name__ == '__main__':
