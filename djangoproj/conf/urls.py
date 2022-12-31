@@ -14,17 +14,17 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from __future__ import annotations
-from django.contrib import admin
-from django.urls import path
 from django.http import HttpResponse
+from django.urls import path
+
+from djangoproj.quant.views import RecommendAPI
 
 
-def index(req):
-    return HttpResponse("Hello, world. You're at the polls index.")
+def health(_):
+    return HttpResponse("OK")
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path('', index, name='index'),
+    path('', health, name='health'),
+    path('api/quant/recommends', RecommendAPI.as_view())
 ]

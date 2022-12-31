@@ -1,45 +1,46 @@
-from django.apps import AppConfig
-
-
 import asyncio
-
 import logging
-from config import config
-import websockets
-import jsons
-import pandas as pd
-from core.strategy import recipe
-from core.repository import load_financial
-import numpy as np
 from datetime import date
-import os
 from threading import Thread
+
+import jsons
+import numpy as np
+import pandas as pd
+import websockets
+
+from base.coding import Singleton
+from config import config
+from core.repository import load_financial
+from core.strategy import recipe
 
 _logger = logging.getLogger(__name__)
 
 
-# todo: apps.get_app_config(MyApp1Config.name)
+class QuantPicker(Singleton):
+    major_colums = [
+        "code",
+        "name",
+        "exchange",
+        "price",
+        "yesterday_close",
+        "P",
+        "control_kind",
+        "supervision_kind",
+        "status_kind",
+        "super",
+        "super_percentile",
+        "super_rank",
+        *recipe.keys(),
+        *[f"{k}_percentile" for k in recipe.keys()]
+    ]
 
-class DeepQuantConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'deepquant'
-
-    def __init__(self, app_name, app_module):
-        AppConfig.__init__(self, app_name, app_module)
+    def __init__(self):
         self.queue = asyncio.Queue()
         self.table = pd.DataFrame()
 
-    def ready(self):
-        running_flag = f"{self.__class__.__name__.upper()}_IS_RUNNING"
-        is_running = os.environ.get(running_flag)
-        if is_running:
-            return
-        else:
-            os.environ[running_flag] = "Running"
-
+        # 반드시 생성자 마지막에 호출되어야 함
         thread = Thread(target=self.work, daemon=True)
         thread.start()
-        self.__set_instance(self)
 
     def work(self):
         event_loop = asyncio.new_event_loop()
@@ -128,3 +129,10 @@ class DeepQuantConfig(AppConfig):
         self.table[f"{factor}_percentile"] = self.table[factor].rank(method="min", pct=True)
         self.table[f"{factor}_rank"] = np.ceil(self.table[factor].rank(ascending=False, method="min"))
         self.table = self.table.sort_values(factor, ascending=False)
+
+    def head(self, limit: int = 50) -> dict:
+        table = self.table.copy()
+        table = table.sort_values(by="super", ascending=False)[:limit]
+        table["확정실적"] = str(table["확정실적"])
+        table["code"] = table.index
+        return table[self.major_colums].T.to_dict().values()

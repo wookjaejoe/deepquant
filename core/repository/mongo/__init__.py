@@ -7,7 +7,7 @@ from pymongo import MongoClient
 
 from config import config
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 _client = MongoClient(config["mongo"]["url"])
 
 

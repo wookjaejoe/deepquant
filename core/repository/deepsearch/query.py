@@ -7,7 +7,7 @@ from requests import get
 from base.timeutil import YearQuarter
 from config import config
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 
 
 def query(title: str, year: int, quarter: int = None):

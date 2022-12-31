@@ -7,7 +7,7 @@ import pandas as pd
 from base.timeutil import YearQuarter
 from core.repository.mongo import DsCollection
 
-_logger = logging.getLogger(__file__)
+_logger = logging.getLogger(__name__)
 
 
 def _load(raw: dict, title: str) -> pandas.Series:
