@@ -1,6 +1,8 @@
+from django.apps import AppConfig
+
+
 import asyncio
 
-from .base import DaemonAppConfig
 import logging
 from config import config
 import websockets
@@ -10,19 +12,34 @@ from core.strategy import recipe
 from core.repository import load_financial
 import numpy as np
 from datetime import date
+import os
+from threading import Thread
 
 _logger = logging.getLogger(__name__)
 
 
 # todo: apps.get_app_config(MyApp1Config.name)
 
-class QuantAppConfig(DaemonAppConfig):
-    name = 'apps.quant'
+class DeepQuantConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'deepquant'
 
     def __init__(self, app_name, app_module):
-        DaemonAppConfig.__init__(self, app_name, app_module)
+        AppConfig.__init__(self, app_name, app_module)
         self.queue = asyncio.Queue()
         self.table = pd.DataFrame()
+
+    def ready(self):
+        running_flag = f"{self.__class__.__name__.upper()}_IS_RUNNING"
+        is_running = os.environ.get(running_flag)
+        if is_running:
+            return
+        else:
+            os.environ[running_flag] = "Running"
+
+        thread = Thread(target=self.work, daemon=True)
+        thread.start()
+        self.__set_instance(self)
 
     def work(self):
         event_loop = asyncio.new_event_loop()
