@@ -26,6 +26,12 @@ class Valuable(metaclass=ABCMeta):
     def diff(self, other: Valuable) -> int:
         return self.value() - other.value()
 
+    def to(self, other: Valuable):
+        item = self
+        while item <= other:
+            yield item
+            item = item.plus()
+
     def __gt__(self, other: YearMonth):
         return self.value().__gt__(other.value())
 
