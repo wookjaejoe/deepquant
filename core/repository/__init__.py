@@ -1,6 +1,6 @@
 import pandas as pd
 
-from core.base import xox
+from core.base.quantutil import xox
 from base.timeutil import YearQuarter
 from .deepsearch import loader as dsloader
 import numpy as np
