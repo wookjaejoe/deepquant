@@ -10,26 +10,22 @@ from .data_provider import DataProvider
 _logger = logging.getLogger(__name__)
 
 
-def parse_req(url: str):
-    url = urlparse(url)
-    qs = parse_qs(url.query)
-    print()
-
-
 class WebSocketServer:
     major_colums = [
         "code",
         "name",
         "exchange",
         "price",
+        "yesterday_close",
         "P",
         "control_kind",
         "supervision_kind",
         "status_kind",
         "super",
+        "super_pct",
         "super_rank",
         *DataProvider.recipe.keys(),
-        *[f"{k}_rank" for k in DataProvider.recipe.keys()]
+        *[f"{k}_pct" for k in DataProvider.recipe.keys()]
     ]
 
     def __init__(
@@ -42,16 +38,13 @@ class WebSocketServer:
         self.port = port
 
     async def send_head(self, session, params: dict):
-        try:
-            limit = int(params["limit"][0])
-        except:
-            limit = 100
-
+        limit = int(params["limit"][0]) if "limit" in params else 50
         table = self.data_provider.table.copy()
         table = table.sort_values(by="super", ascending=False)[:limit]
         table["확정실적"] = str(table["확정실적"])
         table["code"] = table.index
-        table = table[WebSocketServer.major_columns]
+        table = table[self.major_colums]
+        table.to_csv("pick.csv")
         res = jsons.dumps(table.T.to_dict().values(), allow_nan=False)  # fixme: allow_nan 뭔지 확인
         await session.send(res)
 

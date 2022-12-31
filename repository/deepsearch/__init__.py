@@ -86,7 +86,7 @@ def load_and_sum(title: str, year: int, month: int, num: int):
 
 def load_and(
     title: str, year: int, month: int, num: int,
-    operator: Callable[Iterator[pandas.DataFrame], pandas.DataFrame],
+    operator: Callable[[Iterator[pandas.DataFrame]], pandas.DataFrame],
 ) -> pandas.Series:
     return operator(load_many(title, year, month, num))
 

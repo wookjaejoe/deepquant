@@ -10,15 +10,13 @@ import websockets
 from config import config
 from repository import load_financial
 
-rank_scale = 100
-
 logger = logging.getLogger("DataProvider")
 
 
 class DataProvider:
     recipe = {
-        "GP/P": 5,
-        "1/P": 10,
+        "GP/P": 6,
+        "1/P": 8,
 
         "GP_YoY": 1,
         "GP_QoQ": 2,
@@ -30,11 +28,6 @@ class DataProvider:
         self.loop: asyncio.AbstractEventLoop = loop
         self.queue = asyncio.Queue()
         self.table = pd.DataFrame()
-        self._terminate = None
-
-    def calc_super(self, factor: str, factor_analysis: pd.Series):
-        factor_weight = pow(-factor_analysis["spearman"] * factor_analysis["h5"], 1)
-        return self.table[f"{factor}_rank"] * factor_weight
 
     def rerank(self):
         factors = ["GP_YoY", "GP_QoQ", "O_YoY", "O_QoQ"]
@@ -56,22 +49,21 @@ class DataProvider:
         factors.append("1/P")
         self.table["1/P"] = 1 / self.table["P"]
 
+        # 개별 팩터들의 pct 계산
         for factor in factors:
-            colname_rank = f"{factor}_rank"
+            colname_rank = f"{factor}_pct"
             self.table[colname_rank] = \
-                np.ceil(self.table[factor].rank(ascending=False, method="min", pct=True) * rank_scale)
+                np.ceil(self.table[factor].rank(method="min", pct=True) * 100)
 
-        # factor - super
+        # super 팩터 계산
         factor = "super"
         factors.append(factor)
-        self.table[factor] = 1 / sum([self.table[f"{k}_rank"] * v for k, v in DataProvider.recipe.items()]) * 100
+        self.table[factor] = sum([self.table[f"{k}_pct"] * v for k, v in DataProvider.recipe.items()]) * 100
+        # fixme: pct로 할필요가 없음. sum(rank * weight) / sum(weight) 이게 더 좋을 것 같다. 이렇게 하면 1~전체 종목 개수로 집게 되지 않을까?
+        self.table[f"{factor}_pct"] = np.ceil(self.table[factor].rank(method="min", pct=True) * 100)
         self.table[f"{factor}_rank"] = \
-            np.ceil(self.table[factor].rank(ascending=False, method="min", pct=True) * rank_scale)
-
-        self.table = self.table[~self.table["name"].str.endswith("홀딩스")]
-        self.table = self.table[~self.table["name"].str.endswith("지주")]
+            np.ceil(self.table[factor].rank(ascending=False, method="min"))
         self.table = self.table.sort_values(factor, ascending=False)
-        self.table.to_csv("pick.csv")
 
     async def init_table(self):
         dest = config['stockrt']["url"]
