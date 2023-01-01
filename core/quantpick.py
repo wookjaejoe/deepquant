@@ -90,7 +90,7 @@ class QuantPicker(Singleton):
                 items = await self.queue.get()
                 buffer.update({item["code"]: item for item in items})
 
-            _logger.info(f"Updating table for {len(buffer)} records...")
+            _logger.debug(f"Updating table for {len(buffer)} records...")
             new_data = pd.DataFrame(buffer.values()).set_index("code")
             self.table.update(new_data)
             self.rerank()

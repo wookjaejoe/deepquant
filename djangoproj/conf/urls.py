@@ -26,5 +26,5 @@ def health(_):
 
 urlpatterns = [
     path('', health, name='health'),
-    path('api/quant/recommends', RecommendAPI.as_view())
+    path("api/quant/recommends", RecommendAPI.as_view())
 ]

@@ -2,6 +2,9 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
+
+sys.path.append(os.path.abspath(os.path.pardir))
+
 from base import log
 
 log.init()

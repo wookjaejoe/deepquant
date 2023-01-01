@@ -24,7 +24,9 @@ SECRET_KEY = "django-insecure-j1p()c!k96kd#1vk@81x(ix*)jra_51u=hfq#$w#!opv^xgb$t
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    ".jowookjae.in"
+]
 
 # Application definition
 
@@ -38,7 +40,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
 
-    "quant.apps.DeepQuantConfig"
+    "quant"
 
 ]
 
@@ -116,11 +118,6 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# CORS
-# CORS 설정 - whitelist 에 추가된 주소 접근 허용
-CORS_ORIGIN_WHITELIST = [
-    'http://127.0.0.1',
-    'http://localhost'
-]
+# CORS_ORIGIN_WHITELIST = []
 # CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
