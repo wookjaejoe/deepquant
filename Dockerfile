@@ -8,8 +8,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-WORKDIR /usr/src/app/djangoproj
+WORKDIR /usr/src/app/server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8080", "--noreload"]
-
-
-

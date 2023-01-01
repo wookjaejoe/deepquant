@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from threading import Thread
 
 import jsons
@@ -12,6 +12,7 @@ from base.coding import Singleton
 from config import config
 from core.repository import load_financial
 from core.strategy import recipe
+from typing import *
 
 _logger = logging.getLogger(__name__)
 
@@ -24,19 +25,34 @@ class QuantPicker(Singleton):
         "price",
         "yesterday_close",
         "P",
-        "control_kind",
-        "supervision_kind",
-        "status_kind",
+        "control_kind",  # 감리구분: 정상, 주의, 경고, 위험예고, 위험
+        "supervision_kind",  # 관리구분: 일반, 관리
+        "status_kind",  # 주식상태: 정상, 거래정지, 거래중단
         "super",
         "super_percentile",
         "super_rank",
+        "GP",
+        "O",
+        "E",
         *recipe.keys(),
         *[f"{k}_percentile" for k in recipe.keys()]
     ]
 
+    colname_alias = {
+        "cap": "P",
+        "자산총계": "A",
+        "자본총계": "EQ",
+        "매출총이익": "GP",
+        "영업이익": "O",
+        "당기순이익": "E",
+        "영업활동으로인한현금흐름": "CF"
+    }
+
     def __init__(self):
         self.queue = asyncio.Queue()
         self.table = pd.DataFrame()
+        self.updated = None
+        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
 
         # 반드시 생성자 마지막에 호출되어야 함
         thread = Thread(target=self.work, daemon=True)
@@ -45,6 +61,7 @@ class QuantPicker(Singleton):
     def work(self):
         event_loop = asyncio.new_event_loop()
         event_loop.run_until_complete(self.init_table())
+        _logger.info("QuantPicker table is ready.")
         event_loop.create_task(self.listen_market())
         event_loop.create_task(self.listen_queue())
         event_loop.run_forever()
@@ -56,15 +73,7 @@ class QuantPicker(Singleton):
         today = date.today()
         self.table = pd.DataFrame(stocks).set_index("code")
         self.table = self.table.join(load_financial(today.year, today.month))
-        self.table.rename(columns={
-            "cap": "P",
-            "자산총계": "A",
-            "자본총계": "EQ",
-            "매출총이익": "GP",
-            "영업이익": "O",
-            "당기순이익": "E",
-            "영업활동으로인한현금흐름": "CF"
-        }, inplace=True)
+        self.table.rename(columns=self.colname_alias, inplace=True)
 
     async def listen_market(self):
         """
@@ -74,15 +83,15 @@ class QuantPicker(Singleton):
         while True:
             try:
                 _logger.info(f"Connecting websocket to {dest}")
-                websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
-
+                self.websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
                 while True:
-                    data = await websocket.recv()
+                    data = await self.websocket.recv()
                     data = jsons.loads(data)
                     await self.queue.put(data)
             except Exception as e:
                 _logger.error("An error occured with websocket.", exc_info=e)
-                await asyncio.sleep(30)
+                await self.websocket.close()
+                await asyncio.sleep(0)
 
     async def listen_queue(self):
         while True:
@@ -96,9 +105,10 @@ class QuantPicker(Singleton):
                 buffer.update({item["code"]: item for item in items})
 
             _logger.debug(f"Updating table for {len(buffer)} records...")
-            new_data = pd.DataFrame(buffer.values()).set_index("code")
+            new_data = pd.DataFrame(buffer.values()).set_index("code").rename(columns=self.colname_alias)
             self.table.update(new_data)
             self.rerank()
+            self.updated = datetime.now(timezone.utc)
             await asyncio.sleep(0)
 
     def rerank(self):
@@ -140,4 +150,4 @@ class QuantPicker(Singleton):
         table = table.sort_values(by="super", ascending=False)[:limit]
         table["확정실적"] = str(table["확정실적"])
         table["code"] = table.index
-        return table[self.major_colums].T.to_dict().values()
+        return table.loc[:, self.major_colums].T.to_dict().values()

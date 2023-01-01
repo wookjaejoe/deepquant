@@ -8,6 +8,10 @@ from core.quantpick import QuantPicker
 
 # noinspection PyMethodMayBeStatic
 class RecommendAPI(APIView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.picker = QuantPicker.instance()
+
     def get(self, request: Request):
         try:
             if "limit" in request.query_params:
@@ -17,4 +21,9 @@ class RecommendAPI(APIView):
         except:
             raise ParseError(detail="Failed to parse a param: limit")
 
-        return Response(QuantPicker.instance().head(limit=limit))
+        body = {
+            "updated": self.picker.updated,
+            "items": self.picker.head(limit=limit)
+        }
+
+        return Response(body)

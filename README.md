@@ -1,10 +1,10 @@
-1. Build docker image: `docker build . -t jowookjae.in:5000/deepquant-server:VERSION --platform linux/amd64`
-2. Push docker image: `docker push jowookjae.in:5000/deepquant-server:VERSION`
-3. Run container in remote: `docker run -d -p 8888:8080 jowookjae.in:5000/deepquant-server:VERSION`
+# DeepQuant
 
-## Like this
+## Build & Deploy
+1. 도커 이미지 빌드: `python build.py`
+2. 도커 이미지 빌드 중 출력된 실행 커맨드 참고하여 배포 환경에서 `docker run ...` 커맨드 실행
+
+## Export notebook
 ```
-docker build . -t jowookjae.in:5000/deepquant-server:latest --platform linux/amd64
-docker push jowookjae.in:5000/deepquant-server:latest
-docker run -d -p 8888:8080 jowookjae.in:5000/deepquant-server:latest
+jupyter nbconvert --no-input --to html  analysis.ipynb
 ```

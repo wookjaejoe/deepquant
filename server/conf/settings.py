@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-j1p()c!k96kd#1vk@81x(ix*)jra_51u=hfq#$w#!opv^xgb$t
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    ".jowookjae.in"
+    "*",
 ]
 
 # Application definition
@@ -39,9 +39,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
-
-    "quant"
-
 ]
 
 MIDDLEWARE = [

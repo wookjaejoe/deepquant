@@ -1,4 +1,4 @@
 .cache
 .log
-djangoproj/.log
-djangoproj/db.sqlite3
+server/.log
+server/db.sqlite3
