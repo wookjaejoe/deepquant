@@ -71,13 +71,18 @@ class QuantPicker(Singleton):
         Stock RT 서버로부터 시세 변경 이벤트를 지속 수신하고 큐에 담는다.
         """
         dest = config['stockrt']["url"] + "/subscribe"
-        _logger.info(f"Connecting websocket to {dest}")
-        websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
-
         while True:
-            data = await websocket.recv()
-            data = jsons.loads(data)
-            await self.queue.put(data)
+            try:
+                _logger.info(f"Connecting websocket to {dest}")
+                websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
+
+                while True:
+                    data = await websocket.recv()
+                    data = jsons.loads(data)
+                    await self.queue.put(data)
+            except Exception as e:
+                _logger.error("An error occured with websocket.", exc_info=e)
+                await asyncio.sleep(30)
 
     async def listen_queue(self):
         while True:
