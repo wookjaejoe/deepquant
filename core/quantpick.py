@@ -73,6 +73,7 @@ class QuantPicker(Singleton):
         today = date.today()
         self.table = pd.DataFrame(stocks).set_index("code")
         self.table = self.table.join(load_financial(today.year, today.month))
+        self.table.update(self.table[self.table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
         self.table.rename(columns=self.colname_alias, inplace=True)
 
     async def listen_market(self):
@@ -148,6 +149,18 @@ class QuantPicker(Singleton):
     def head(self, limit: int = 50) -> dict:
         table = self.table.copy()
         table = table.sort_values(by="super", ascending=False)[:limit]
-        table["확정실적"] = str(table["확정실적"])
         table["code"] = table.index
         return table.loc[:, self.major_colums].T.to_dict().values()
+
+    def get(self, code: str) -> dict:
+        result = self.table.loc[code].to_dict()
+        result.update({"code": code})
+        return result
+
+    def distribution(self, colname: str):
+        table = self.table[colname].dropna()
+        return {
+            "code": table.index.tolist(),
+            "values": table.values.tolist(),
+            "percentiles": table.rank(pct=True).tolist()
+        }

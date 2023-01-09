@@ -1,16 +1,14 @@
 import time
 
 from base import log
-
-from core.repository.deepsearch import loader as dsloader
+from base.timeutil import YearQuarter
 from core.repository.deepsearch import query as dsquery
 from core.repository.mongo import DsCollection
-from base.timeutil import YearQuarter
 
 log.init()
 
 titles = [
-    "자본총계", "자산총계", "부채총계",
+    "자본총계", "자산총계", "부채총계", "유동자산", "비유동자산"
     "매출액", "매출총이익", "영업이익", "당기순이익",
     "영업활동으로인한현금흐름",
 ]

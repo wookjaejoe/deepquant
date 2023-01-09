@@ -4,13 +4,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.quantpick import QuantPicker
+from core.strategy import recipe
+
+picker = QuantPicker.instance()
 
 
 # noinspection PyMethodMayBeStatic
 class RecommendAPI(APIView):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.picker = QuantPicker.instance()
 
     def get(self, request: Request):
         try:
@@ -22,8 +24,34 @@ class RecommendAPI(APIView):
             raise ParseError(detail="Failed to parse a param: limit")
 
         body = {
-            "updated": self.picker.updated,
-            "items": self.picker.head(limit=limit)
+            "updated": picker.updated,
+            "items": picker.head(limit=limit)
         }
 
         return Response(body)
+
+
+class RecipeAPI(APIView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def get(request: Request):
+        return Response(recipe)
+
+
+class RecipeDistributionAPI(APIView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get(self, request: Request, title: str):
+        return Response(picker.distribution(title))
+
+
+class StockAPI(APIView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def get(request: Request, code: str):
+        return Response(picker.get(code))
