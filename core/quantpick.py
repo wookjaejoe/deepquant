@@ -129,9 +129,7 @@ class QuantPicker(Singleton):
             for neg in ["P", "A", "EQ"]:
                 join_fraction_factor(pos, neg)
 
-        self.table["1/P"] = 1 / self.table["P"]
-        self.table.loc[self.table[neg] <= 0, "1/P"] = np.nan
-        factors.append("1/P")
+        factors.append("P")
 
         # 개별 팩터들의 pct 계산
         for factor in factors:
