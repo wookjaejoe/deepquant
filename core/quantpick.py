@@ -139,10 +139,13 @@ class QuantPicker(Singleton):
         # super 팩터 계산
         factor = "super"
         factors.append(factor)
-        self.table[factor] = sum([self.table[f"{k}_percentile"] * w for k, w in recipe.items()]) / sum(recipe.values())
+        sv = sum([self.table[f"{k}_percentile"] * w for k, w in recipe.items()])
+        sn = (sv - sv.mean()) / sv.std()
+        self.table[factor] = sn / sn.max()
         self.table[f"{factor}_percentile"] = self.table[factor].rank(method="min", pct=True)
         self.table[f"{factor}_rank"] = np.ceil(self.table[factor].rank(ascending=False, method="min"))
         self.table = self.table.sort_values(factor, ascending=False)
+        print()
 
     def head(self, limit: int = 50) -> dict:
         table = self.table.copy()
