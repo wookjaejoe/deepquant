@@ -108,6 +108,7 @@ class QuantPicker(Singleton):
             _logger.debug(f"Updating table for {len(buffer)} records...")
             new_data = pd.DataFrame(buffer.values()).set_index("code").rename(columns=self.colname_alias)
             self.table.update(new_data)
+            _logger.info(f"{len(new_data)} changed. Starting re-rank...")
             self.rerank()
             self.updated = datetime.now(timezone.utc)
             await asyncio.sleep(0)
@@ -145,7 +146,6 @@ class QuantPicker(Singleton):
         self.table[f"{factor}_percentile"] = self.table[factor].rank(method="min", pct=True)
         self.table[f"{factor}_rank"] = np.ceil(self.table[factor].rank(ascending=False, method="min"))
         self.table = self.table.sort_values(factor, ascending=False)
-        print()
 
     def head(self, limit: int = 50) -> dict:
         table = self.table.copy()
