@@ -92,25 +92,28 @@ class QuantPicker(Singleton):
             except Exception as e:
                 _logger.error("An error occured with websocket.", exc_info=e)
                 await self.websocket.close()
-                await asyncio.sleep(0)
+                await asyncio.sleep(30)
 
     async def listen_queue(self):
         while True:
-            if self.queue.empty():
-                await asyncio.sleep(1)
-                continue
+            try:
+                if self.queue.empty():
+                    await asyncio.sleep(1)
+                    continue
 
-            buffer = {}
-            while not self.queue.empty():
-                items = await self.queue.get()
-                buffer.update({item["code"]: item for item in items})
+                buffer = {}
+                while not self.queue.empty():
+                    items = await self.queue.get()
+                    buffer.update({item["code"]: item for item in items})
 
-            _logger.debug(f"Updating table for {len(buffer)} records...")
-            new_data = pd.DataFrame(buffer.values()).set_index("code").rename(columns=self.colname_alias)
-            self.table.update(new_data)
-            _logger.info(f"{len(new_data)} changed. Starting re-rank...")
-            self.rerank()
-            self.updated = datetime.now(timezone.utc)
+                new_data = pd.DataFrame(buffer.values()).set_index("code").rename(columns=self.colname_alias)
+                _logger.info(f"{len(new_data)} changed. Re-ranking...")
+                self.table.update(new_data)
+                self.rerank()
+                self.updated = datetime.now(timezone.utc)
+            except Exception as e:
+                _logger.error("An error occured while update for new items.", exc_info=e)
+
             await asyncio.sleep(0)
 
     def rerank(self):
