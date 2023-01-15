@@ -140,15 +140,24 @@ class QuantPicker(Singleton):
             colname_rank = f"{factor}_percentile"
             self.table[colname_rank] = self.table[factor].rank(method="min", pct=True)
 
+        def weighted(pct: float, w: float):
+            assert w != 0
+            if w > 0:
+                return pct * w
+            else:
+                return (1 - pct) * abs(w)
+
         # super 팩터 계산
-        factor = "super"
-        factors.append(factor)
-        sv = sum([self.table[f"{k}_percentile"] * w for k, w in recipe.items()])
+        del factor
+        factors.append("super")
+        sv = sum([weighted(self.table[f"{k}_percentile"], w) for k, w in recipe.items()])
+        sv = sv / sum([abs(w) for w in recipe.values()])
         sn = (sv - sv.mean()) / sv.std()
-        self.table[factor] = sn / sn.max()
-        self.table[f"{factor}_percentile"] = self.table[factor].rank(method="min", pct=True)
-        self.table[f"{factor}_rank"] = np.ceil(self.table[factor].rank(ascending=False, method="min"))
-        self.table = self.table.sort_values(factor, ascending=False)
+        self.table["super"] = sv
+        self.table["super_normalized"] = sn / sn.max()
+        self.table["super_percentile"] = self.table["super"].rank(method="min", pct=True)
+        self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
+        self.table = self.table.sort_values("super", ascending=False)
 
     def head(self, limit: int = 50) -> dict:
         table = self.table.copy()

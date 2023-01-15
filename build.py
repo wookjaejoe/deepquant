@@ -30,7 +30,8 @@ def main():
 
     print('=' * 80)
     print('Execute the command below to run the container in the target host:')
-    print(f"docker run -d --restart=unless-stopped -p 8888:8080 {IMAGE_NAME}")
+    options = "-d --restart=unless-stopped -p 8888:8080 --name deepquant-server --restart unless-stopped"
+    print(f"docker run {options} {IMAGE_NAME}")
     print('=' * 80)
 
 
