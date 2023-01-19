@@ -23,5 +23,7 @@ urlpatterns = [
     path("api/quant/recommends", recommend.RecommendAPI.as_view()),
     path("api/quant/<str:code>", recommend.StockAPI.as_view()),
     path("api/recipe", recommend.RecipeAPI.as_view()),
+    path("api/factors", recommend.FactorsAPI.as_view()),
     path("api/recipe/distribution/<str:title>", recommend.RecipeDistributionAPI.as_view())
+
 ]

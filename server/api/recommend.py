@@ -1,10 +1,11 @@
+import jsons
 from rest_framework.exceptions import ParseError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.quantpick import QuantPicker
-from core.strategy import recipe
+from core.strategy import recipe, factor_candis
 
 picker = QuantPicker.instance()
 
@@ -41,11 +42,17 @@ class RecipeAPI(APIView):
 
 
 class RecipeDistributionAPI(APIView):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
-    def get(self, request: Request, title: str):
+    @staticmethod
+    def get(request: Request, title: str):
         return Response(picker.distribution(title))
+
+
+class FactorsAPI(APIView):
+
+    @staticmethod
+    def get(request: Request):
+        return Response(jsons.dump(factor_candis))
 
 
 class StockAPI(APIView):
