@@ -142,16 +142,16 @@ class QuantPicker(Singleton):
 
         def weighted(pct: float, w: float):
             assert w != 0
-            if w > 0:
-                return pct * w
-            else:
-                return (1 - pct) * abs(w)
+            return pct * w if w > 0 else (1 - pct) * abs(w)
 
         # super 팩터 계산
         del factor
         factors.append("super")
+        # 1. 레시피를 구성하는 개별 팩터 분위(percentile) * 가중치의 총합을 구함
         sv = sum([weighted(self.table[f"{k}_percentile"], w) for k, w in recipe.items()])
+        # 2. 위의 시리즈에 가중치의 총합을 나눈다 => 0~1 사이 값으로 일반화됨
         sv = sv / sum([abs(w) for w in recipe.values()])
+        # 3. 표준정규화
         sn = (sv - sv.mean()) / sv.std()
         self.table["super"] = sv
         self.table["super_normalized"] = sn / sn.max()
