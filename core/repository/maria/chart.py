@@ -85,10 +85,11 @@ def _query_month_chart(year: int, month: int):
 
 def upload_month_chart():
     dates = pd.read_sql("select distinct date from historical_chart", maria_home())["date"]
-    yms = sorted({YearMonth.of(d) for d in dates})
+    yms = sorted({YearMonth.from_date(d) for d in dates})
     assert len(yms) == len(set(yms))
     result = pd.DataFrame()
-    for ym in min(yms).iter(max(yms)):
+    min(yms)
+    for ym in min(yms).to(max(yms)):
         print(ym)
         result = pd.concat([result, pd.read_sql(_query_month_chart(ym.year, ym.month), maria_home())])
 

@@ -117,10 +117,15 @@ class YearMonth(Valuable):
         else:
             return YearMonth(int(value / 12), value % 12)
 
-    # todo: rename to from_date
     @staticmethod
-    def of(date_: date):
+    def from_date(date_: date):
         return YearMonth(date_.year, date_.month)
+
+    @staticmethod
+    def from_string(s: str):
+        sp = s.split("-")
+        assert len(sp) == 2
+        return YearMonth(int(sp[0]), int(sp[1]))
 
     @staticmethod
     def today():
@@ -136,11 +141,17 @@ class YearMonth(Valuable):
     def duration(self, other) -> float:
         return (other.value() - self.value()) / 12
 
-    @staticmethod
-    def from_string(s: str):
-        sp = s.split("-")
-        assert len(sp) == 2
-        return YearMonth(int(sp[0]), int(sp[1]))
+    def next(self):
+        return self.from_value(self.value() + 1)
+
+    def to(self, end: YearMonth) -> Iterable[YearMonth]:
+        item = self
+        while item <= end:
+            yield item
+            item = item.next()
 
     def __str__(self):
         return "-".join([str(self.year).ljust(4, "0"), str(self.month).rjust(2, "0")])
+
+    def __hash__(self):
+        return hash(self.value())
