@@ -8,5 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-WORKDIR /usr/src/app/server
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8080", "--noreload"]
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host=0.0.0.0", "--port=8080"]

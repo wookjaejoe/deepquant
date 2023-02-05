@@ -159,11 +159,11 @@ class QuantPicker(Singleton):
         self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
         self.table = self.table.sort_values("super", ascending=False)
 
-    def head(self, limit: int = 50) -> dict:
+    def head(self, limit: int = 50) -> list:
         table = self.table.copy()
         table = table.sort_values(by="super", ascending=False)[:limit]
         table["code"] = table.index
-        return table.loc[:, self.major_colums].T.to_dict().values()
+        return list(table.loc[:, self.major_colums].T.to_dict().values())
 
     def get(self, code: str) -> dict:
         result = self.table.loc[code].to_dict()
