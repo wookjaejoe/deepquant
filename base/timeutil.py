@@ -32,16 +32,16 @@ class Valuable(metaclass=ABCMeta):
             yield item
             item = item.plus()
 
-    def __gt__(self, other: YearMonth):
+    def __gt__(self, other: Valuable):
         return self.value().__gt__(other.value())
 
-    def __lt__(self, other: YearMonth):
+    def __lt__(self, other: Valuable):
         return self.value().__lt__(other.value())
 
-    def __ge__(self, other: YearMonth):
+    def __ge__(self, other: Valuable):
         return self.value().__ge__(other.value())
 
-    def __le__(self, other: YearMonth):
+    def __le__(self, other: Valuable):
         return self.value().__le__(other.value())
 
     def __hash__(self):
