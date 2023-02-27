@@ -25,7 +25,7 @@ def get_market_ohlcv_by_date(fromdate: str, todate: str, ticker: str, adjusted: 
     df.columns = [
         'date',
         'open', 'high', 'low', 'close', 'cap',
-        'vol', 'amount', 'list_shares',
+        'vol', 'val', 'shares',
         # '등락률',
     ]
     df["date"] = df["date"].apply(lambda x: datetime.strptime(x, "%Y/%m/%d").date())
@@ -34,7 +34,7 @@ def get_market_ohlcv_by_date(fromdate: str, todate: str, ticker: str, adjusted: 
     df = df.replace('', '0')
     df = df.astype({
         "open": np.int32, "high": np.int32, "low": np.int32, "close": np.int32, 'cap': np.int64,
-        "vol": np.int64, "amount": np.int64, 'list_shares': np.int64,
+        "vol": np.int64, "val": np.int64, 'shares': np.int64,
         # "등락률": np.float32
     })
     return df.sort_index()
@@ -44,7 +44,7 @@ def create_chart_table(table_name: str):
     with MariaConnection() as conn:
         conn.query(
             f"""
-            create table finance.{table_name}
+            create table {table_name}
             (
                 date        date       not null,
                 code        varchar(8) not null,
@@ -54,10 +54,12 @@ def create_chart_table(table_name: str):
                 close       int        null,
                 cap         bigint     null,
                 vol         bigint     null,
-                amount      bigint     null,
-                list_shares bigint     null,
-                primary key (date, code)
+                val         bigint     null,
+                shares      bigint     null,
+                primary key (code, date)
             );
+            create index chart_code_index on chart (code);
+            create index chart_date_index on chart (date);
             """
         )
 
@@ -91,7 +93,7 @@ def update_chart(codes: list):
             ticker=code,
         )
         df["code"] = code
-        df.set_index(["date", "code"], inplace=True)
+        df.set_index(["code", "date"], inplace=True)
         df.sort_index(inplace=True)
         df.to_sql(table_name, db, if_exists="append", index=True)
 
@@ -118,10 +120,6 @@ def update_stocks() -> DataFrame:
     return df
 
 
-def main():
+def upload_from_krx():
     stocks = update_stocks()
     update_chart(list(stocks["code"]))
-
-
-if __name__ == '__main__':
-    main()
