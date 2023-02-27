@@ -12,3 +12,6 @@ uvicorn[standard]~=0.20.0
 jupyter
 fastapi~=0.89.1
 
+
+datetime~=5.0
+pykrx~=1.0.40
