@@ -58,10 +58,13 @@ def create_chart_table(table_name: str):
                 shares      bigint     null,
                 primary key (code, date)
             );
-            create index chart_code_index on chart (code);
-            create index chart_date_index on chart (date);
             """
         )
+        conn.commit()
+
+        conn.query(f"create index chart_code_index on {table_name} (code);")
+        conn.query(f"create index chart_date_index on {table_name} (date);")
+        conn.commit()
 
 
 def drop_table_if_exists(table_name: str):
@@ -102,7 +105,6 @@ def update_chart(codes: list):
     with MariaConnection() as conn:
         conn.query(f"insert into chart (select * from {table_name})")
         conn.commit()
-    print()
 
 
 def update_stocks() -> DataFrame:
