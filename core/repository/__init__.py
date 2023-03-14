@@ -2,7 +2,7 @@ import pandas as pd
 
 from core.base.quantutil import xox
 from base.timeutil import YearQuarter
-from .deepsearch import loader as dsloader
+from .deepsearch.loader import load_one, load_and_sum
 import numpy as np
 
 
@@ -31,25 +31,46 @@ FINANIAL_ALIAS = {
 
 def load_financial(year, month) -> pd.DataFrame:
     result = merge(
-        dsloader.load_one("자산총계", year, month),
-        dsloader.load_one("자본총계", year, month),
-        dsloader.load_and_sum("매출액", year, month, 4),
-        dsloader.load_and_sum("매출총이익", year, month, 4),
-        dsloader.load_and_sum("영업이익", year, month, 4),
-        dsloader.load_and_sum("당기순이익", year, month, 4),
-        # ds.load_and_sum("영업활동으로인한현금흐름", year, month, 4),
+        load_one("자산총계", year, month),
+        load_one("자본총계", year, month),
+        load_and_sum("매출액", year, month, 4),
+        load_and_sum("매출총이익", year, month, 4),
+        load_and_sum("영업이익", year, month, 4),
+        load_and_sum("당기순이익", year, month, 4),
     )
 
-    result["GP_YoY"] = xox(dsloader.load_and_sum("매출총이익", year - 1, month, 4), result["매출총이익"])
-    result["O_YoY"] = xox(dsloader.load_and_sum("영업이익", year - 1, month, 4), result["영업이익"])
-    result["E_YoY"] = xox(dsloader.load_and_sum("당기순이익", year - 1, month, 4), result["당기순이익"])
-    # result["CF_YoY"] = xox(ds.load_and_sum("영업활동으로인한현금흐름", year - 1, month, 4), result["영업활동으로인한현금흐름"])
+    result["부채총계"] = result["자산총계"] - result["자본총계"]
+    result["BIS"] = result["자본총계"] / result["자산총계"]
+    result["직전자본총계"] = load_one("자산총계", year - 1, month)
+    result["직전자산총계"] = load_one("자본총계", year - 1, month)
+    result["BIS_QoQ"] = (result["자본총계"] / result["자산총계"]) - (result["직전자본총계"] / result["직전자산총계"])
 
-    result["GP_QoQ"] = xox(dsloader.load_one("매출총이익", year - 1, month), dsloader.load_one("매출총이익", year, month))
-    result["O_QoQ"] = xox(dsloader.load_one("영업이익", year - 1, month), dsloader.load_one("영업이익", year, month))
-    result["E_QoQ"] = xox(dsloader.load_one("당기순이익", year - 1, month), dsloader.load_one("당기순이익", year, month))
-    # result["CF_QoQ"] = xox(ds.load_one("영업활동으로인한현금흐름", year - 1, month), ds.load_one("영업활동으로인한현금흐름", year, month))
+    result["R_YoY"] = xox(load_and_sum("매출액", year - 1, month, 4), result["매출액"])
+    result["GP_YoY"] = xox(load_and_sum("매출총이익", year - 1, month, 4), result["매출총이익"])
+    result["O_YoY"] = xox(load_and_sum("영업이익", year - 1, month, 4), result["영업이익"])
+    result["E_YoY"] = xox(load_and_sum("당기순이익", year - 1, month, 4), result["당기순이익"])
+
+    result["R_QoQ"] = xox(load_one("매출액", year - 1, month), load_one("매출액", year, month))
+    result["GP_QoQ"] = xox(load_one("매출총이익", year - 1, month), load_one("매출총이익", year, month))
+    result["O_QoQ"] = xox(load_one("영업이익", year - 1, month), load_one("영업이익", year, month))
+    result["E_QoQ"] = xox(load_one("당기순이익", year - 1, month), load_one("당기순이익", year, month))
+
+    def profit_ratio(profit: str, based: str):
+        aft = load_one(profit, year, month) / load_one(based, year, month)
+        bef = load_one(profit, year - 1, month) / load_one(based, year - 1, month)
+        return aft - bef
+
+    result["R/A_QoQ"] = profit_ratio("매출액", "자산총계")
+    result["GP/A_QoQ"] = profit_ratio("매출총이익", "자산총계")
+    result["O/A_QoQ"] = profit_ratio("영업이익", "자산총계")
+    result["E/A_QoQ"] = profit_ratio("당기순이익", "자산총계")
+
+    result["R/EQ_QoQ"] = profit_ratio("매출액", "자본총계")
+    result["GP/EQ_QoQ"] = profit_ratio("매출총이익", "자본총계")
+    result["O/EQ_QoQ"] = profit_ratio("영업이익", "자본총계")
+    result["E/EQ_QoQ"] = profit_ratio("당기순이익", "자본총계")
 
     result["확정실적"] = YearQuarter.last_confirmed(year, month)
     result.replace([np.inf, -np.inf], np.nan, inplace=True)
+
     return result

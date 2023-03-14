@@ -42,6 +42,7 @@ class QuantPicker(Singleton):
         "cap": "P",
         "자산총계": "A",
         "자본총계": "EQ",
+        "매출액": "R",
         "매출총이익": "GP",
         "영업이익": "O",
         "당기순이익": "E",
@@ -117,7 +118,22 @@ class QuantPicker(Singleton):
             await asyncio.sleep(0)
 
     def rerank(self):
-        factors = ["GP_YoY", "GP_QoQ", "O_YoY", "O_QoQ"]
+        factors = [
+            "R_YoY",
+            "GP_YoY",
+            "O_YoY",
+            "E_YoY",
+
+            "R_QoQ",
+            "GP_QoQ",
+            "O_QoQ",
+            "E_QoQ",
+
+            "R/A_QoQ",
+            "GP/A_QoQ",
+            "O/A_QoQ",
+            "E/A_QoQ",
+        ]
 
         def join_fraction_factor(_pos: str, _neg: str):
             _factor = f"{_pos}/{_neg}"
@@ -125,11 +141,7 @@ class QuantPicker(Singleton):
             self.table.loc[self.table[neg] <= 0, _factor] = np.nan
             factors.append(_factor)
 
-        for pos in ["A", "EQ"]:
-            for neg in ["P"]:
-                join_fraction_factor(pos, neg)
-
-        for pos in ["GP", "O", "E"]:
+        for pos in ["R", "GP", "O", "E", "EQ"]:
             for neg in ["P", "A", "EQ"]:
                 join_fraction_factor(pos, neg)
 

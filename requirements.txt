@@ -15,3 +15,9 @@ fastapi~=0.89.1
 
 datetime~=5.0
 pykrx~=1.0.40
+xmltodict~=0.13.0
+beautifulsoup4~=4.11.1
+python-Levenshtein~=0.20.9
+
+levenshtein~=0.20.9
+retry~=0.9.2
