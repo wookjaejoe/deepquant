@@ -228,17 +228,22 @@ def put_together(df: pd.DataFrame):
         ds.load_by_quart("당기순이익", 2022, 3)
     ])
 
-    def calc(title: str):
+    def qoq(title: str):
+        x = ds.load_by_quart(title, 2021, 4)
+        y = df[f"분기{title}"]
+        return (y - x) / x
+
+    def qoq_with_asset(title: str):
         return (df[f"분기{title}"] / df["당해년도_자산총계"]) - (ds.load_by_quart(title, 2021, 4) / df["직전년도_자산총계"])
 
-    df["매출액/자산총계_QoQ"] = calc("매출액")
-    df["영업이익/자산총계_QoQ"] = calc("영업이익")
-    df["당기순이익/자산총계_QoQ"] = calc("당기순이익")
+    df["매출액_QoQ"] = qoq("매출액")
+    df["영업이익_QoQ"] = qoq("영업이익")
+
+    df["매출액/자산총계_QoQ"] = qoq_with_asset("매출액")
+    df["영업이익/자산총계_QoQ"] = qoq_with_asset("영업이익")
 
     df["매출액/자산총계_QoQ_pct"] = df["매출액/자산총계_QoQ"].rank(pct=True)
     df["영업이익/자산총계_QoQ_pct"] = df["영업이익/자산총계_QoQ"].rank(pct=True)
-    df["당기순이익/자산총계_QoQ_pct"] = df["당기순이익/자산총계_QoQ"].rank(pct=True)
-    df["QoQ_pct"] = df["매출액/자산총계_QoQ_pct"] + df["영업이익/자산총계_QoQ_pct"] + df["당기순이익/자산총계_QoQ_pct"]
     df.to_csv("2022-4Q.csv")
 
 
@@ -246,6 +251,6 @@ def run():
     """
     20230101 이후에 공시된 매출액 또는 손익 구조 변경 리포트를 다운로드한 후 종합하여 csv 파일을 생성한다.
     """
-    load_all()
+    # load_all()
     df = read_all()
     put_together(df)
