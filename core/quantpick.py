@@ -118,37 +118,12 @@ class QuantPicker(Singleton):
             await asyncio.sleep(0)
 
     def rerank(self):
-        factors = [
-            "R_YoY",
-            "GP_YoY",
-            "O_YoY",
-            "E_YoY",
-
-            "R_QoQ",
-            "GP_QoQ",
-            "O_QoQ",
-            "E_QoQ",
-
-            "R/A_QoQ",
-            "GP/A_QoQ",
-            "O/A_QoQ",
-            "E/A_QoQ",
-        ]
-
-        def join_fraction_factor(_pos: str, _neg: str):
-            _factor = f"{_pos}/{_neg}"
-            self.table[_factor] = self.table[pos] / self.table[neg]
-            self.table.loc[self.table[neg] <= 0, _factor] = np.nan
-            factors.append(_factor)
-
-        for pos in ["R", "GP", "O", "E", "EQ"]:
-            for neg in ["P", "A", "EQ"]:
-                join_fraction_factor(pos, neg)
-
-        factors.append("P")
+        self.table["R/P"] = self.table["R"] / self.table["P"]
+        self.table["GP/P"] = self.table["GP"] / self.table["P"]
+        self.table["EQ/P"] = self.table["EQ"] / self.table["P"]
 
         # 개별 팩터들의 pct 계산
-        for factor in factors:
+        for factor in recipe.keys():
             colname_rank = f"{factor}_percentile"
             self.table[colname_rank] = self.table[factor].rank(method="min", pct=True)
 
@@ -157,8 +132,6 @@ class QuantPicker(Singleton):
             return pct * w if w > 0 else (1 - pct) * abs(w)
 
         # super 팩터 계산
-        del factor
-        factors.append("super")
         # 1. 레시피를 구성하는 개별 팩터 분위(percentile) * 가중치의 총합을 구함
         sv = sum([weighted(self.table[f"{k}_percentile"], w) for k, w in recipe.items()])
         # 2. 위의 시리즈에 가중치의 총합을 나눈다 => 0~1 사이 값으로 일반화됨
