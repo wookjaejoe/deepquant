@@ -10,7 +10,7 @@ import websockets
 
 from base.coding import Singleton
 from config import config
-from core.repository import load_financial, pre_load_financial_with_2022_4q
+from core.repository import load_financial
 from core.strategy import recipe
 from typing import *
 
@@ -73,7 +73,7 @@ class QuantPicker(Singleton):
         stocks = jsons.loads(await ws.recv())
         today = date.today()
         self.table = pd.DataFrame(stocks).set_index("code")
-        self.table = self.table.join(pre_load_financial_with_2022_4q())
+        self.table = self.table.join(load_financial(today.year, today.month))
         self.table.update(self.table[self.table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
         self.table.rename(columns=self.colname_alias, inplace=True)
 
@@ -119,6 +119,7 @@ class QuantPicker(Singleton):
 
     def rerank(self):
         self.table["R/P"] = self.table["R"] / self.table["P"]
+        self.table["GP/P"] = self.table["GP"] / self.table["P"]
         self.table["EQ/P"] = self.table["EQ"] / self.table["P"]
 
         # 개별 팩터들의 pct 계산
@@ -142,6 +143,7 @@ class QuantPicker(Singleton):
         self.table["super_percentile"] = self.table["super"].rank(method="min", pct=True)
         self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
         self.table = self.table.sort_values("super", ascending=False)
+        print()
 
     def head(self, limit: int = 50) -> list:
         table = self.table.copy()
