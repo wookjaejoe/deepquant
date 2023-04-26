@@ -143,6 +143,7 @@ class QuantPicker(Singleton):
         self.table["super_percentile"] = self.table["super"].rank(method="min", pct=True)
         self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
         self.table = self.table.sort_values("super", ascending=False)
+        self.table.to_csv("pick.csv")
         print()
 
     def head(self, limit: int = 50) -> list:

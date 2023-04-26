@@ -5,13 +5,19 @@ from typing import *
 from enum import Enum
 
 recipe = {
-    "P": -4,
-    "R/P": 4,
-    "EQ/P": 2,
+    "P": -8,
+    "GP/P": 4,
+    "EQ/P": 4,
+
     "R_QoQ": 1,
+    "GP_QoQ": 1,
     "O_QoQ": 1,
+    "E_QoQ": 1,
+
     "R/A_QoQ": 1,
+    "GP/A_QoQ": 1,
     "O/A_QoQ": 1,
+    "E/A_QoQ": 1
 }
 
 
