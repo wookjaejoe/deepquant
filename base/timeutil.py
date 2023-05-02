@@ -72,31 +72,40 @@ class YearQuarter(Valuable):
             return YearQuarter(int(value / 4), value % 4)
 
     @staticmethod
-    def last_confirmed(year: int, month: int):
+    def last_confirmed(year: int, month: int) -> YearQuarter:
         """
-        1월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
-        2월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
-        3월 - 작년 3Q, 2Q, 1Q, 제작년 4Q
-        4월 - 작년 4Q, 3Q, 2Q, 1Q
-        5월 - 작년 4Q, 3Q, 2Q, 1Q
-        6월 - 1Q, 작년 4Q, 3Q, 2Q
-        7월 - 1Q, 작년 4Q, 3Q, 2Q
-        8월 - 1Q, 작년 4Q, 3Q, 2Q
-        9월 - 2Q, 1Q, 작년 4Q, 3Q
-        10월 - 2Q, 1Q, 작년 4Q, 3Q
-        11월 - 2Q, 1Q, 작년 4Q, 3Q
-        12월 - 3Q, 2Q, 1Q, 작년 4Q
+        입력된 년월의 말일에 확인 가능한 가장 최근 확정 실적 분기를 반환한다.
+
+        https://dart.fss.or.kr/info/main.do?menu=410
+        12월 결산 기준 정기보고서 제출 기한
+        - 1/4분기  05/15
+        - 반기보고서 08/14
+        - 3/4분기  11/14
+        - 사업보고서 03/31
+        ----
+        1월말  - 작년 3Q, 2Q, 1Q, 제작년 4Q
+        2월말  - 작년 3Q, 2Q, 1Q, 제작년 4Q
+        3월말  - 작년 3Q, 2Q, 1Q, 제작년 4Q
+        4월말  - 작년 4Q, 3Q, 2Q, 1Q
+        5월말  - 1Q, 작년 4Q, 3Q, 2Q
+        6월말  - 1Q, 작년 4Q, 3Q, 2Q
+        7월말  - 1Q, 작년 4Q, 3Q, 2Q
+        8월말  - 2Q, 1Q, 작년 4Q, 3Q
+        9월말  - 2Q, 1Q, 작년 4Q, 3Q
+        10월말 - 2Q, 1Q, 작년 4Q, 3Q
+        11월말 - 3Q, 2Q, 1Q, 작년 4Q
+        12월말 - 3Q, 2Q, 1Q, 작년 4Q
         """
 
         if month in [1, 2, 3]:
             return YearQuarter(year - 1, 3)
-        elif month in [4, 5]:
+        elif month in [4]:
             return YearQuarter(year - 1, 4)
-        elif month in [6, 7, 8]:
+        elif month in [5, 6, 7]:
             return YearQuarter(year, 1)
-        elif month in [9, 10, 11]:
+        elif month in [8, 9, 10]:
             return YearQuarter(year, 2)
-        elif month in [12]:
+        elif month in [11, 12]:
             return YearQuarter(year, 3)
         else:
             raise Exception(f"Invalid month: {month}")
