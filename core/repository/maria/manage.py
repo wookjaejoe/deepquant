@@ -125,9 +125,9 @@ def create_month_chart_table(table_name: str):
         conn.commit()
 
 
-def insert_month_chart(year: int, month: int):
+def insert_month_chart(table_name: str, year: int, month: int):
     with MariaConnection() as conn:
-        conn.query(f"""insert into month_chart (
+        conn.query(f"""insert into {table_name} (
         SELECT
             code,
             MAX(date)                                                                    as date,
@@ -147,7 +147,6 @@ def insert_month_chart(year: int, month: int):
         order by date);
         """)
         conn.commit()
-        conn.close()
 
 
 def upload_month_chart():
@@ -162,15 +161,10 @@ def upload_month_chart():
     assert len(yms) == len(set(yms))
     for ym in min(yms).to(max(yms)):
         print(ym)
-        insert_month_chart(ym.year, ym.month)
+        insert_month_chart(table_name, ym.year, ym.month)
 
     drop_table_if_exists("month_chart")
     create_month_chart_table("month_chart")
     with MariaConnection() as conn:
-        conn.query(f"insert into chart (select * from {table_name})")
+        conn.query(f"insert into month_chart (select * from {table_name})")
         conn.commit()
-
-
-if __name__ == '__main__':
-    upload_chart_from_krx()
-    upload_month_chart()
