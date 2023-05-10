@@ -5,7 +5,7 @@ from pandas import DataFrame
 from pykrx.website.krx.market.core import 상장종목검색
 
 from base.timeutil import YearMonth
-from core.repository.krx import get_market_ohlcv_by_date
+from core.repository.krx import get_ohlcv_by_ticker
 from core.repository.maria.conn import MariaConnection, maria_home
 
 db = maria_home()
@@ -60,7 +60,7 @@ def update_chart(codes: list):
         except:
             pass
 
-        df = get_market_ohlcv_by_date(
+        df = get_ohlcv_by_ticker(
             fromdate='20000101',
             todate=(date.today() - timedelta(days=1)).strftime('%Y%m%d'),
             ticker=code,
