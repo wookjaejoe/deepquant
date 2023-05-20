@@ -1,9 +1,11 @@
+from typing import *
+
+import numpy as np
 import pandas as pd
 
-from core.base.quantutil import xox
 from base.timeutil import YearQuarter
-from .deepsearch.loader import load_one, load_and_sum
-import numpy as np
+from core.base.quantutil import xox
+from core.repository.mongo import ds
 
 
 def merge(*data_list) -> pd.DataFrame:
@@ -77,6 +79,10 @@ def load_financial(year, month) -> pd.DataFrame:
 
 
 def pre_load_financial_with_2022_4q():
+    """
+    ./core/repository/dartx/example1 과 함께 사용할 수 있는 함수.
+    당장 사용할 일이 없음 2024년 초 쯤에 다시 한번 사용하게 될지도?
+    """
     raw = pd.read_csv("2022-4Q.csv", dtype={"code": str}).set_index("code")
     result = merge(
         raw["당해년도_자산총계"].rename("자산총계"),
@@ -92,3 +98,40 @@ def pre_load_financial_with_2022_4q():
 
     result["확정실적"] = YearQuarter(2022, 4)
     return result
+
+
+def load_by_quarter(title: str, year: int, quarter: int) -> pd.Series:
+    try:
+        return ds.load_by_quarter(title=title, year=year, quarter=quarter)
+    except:
+        return pd.read_csv(f"{year}-{quarter}Q.csv", dtype={"code": str}).set_index("code")[title]
+
+
+def load_one(title: str, year: int, month: int) -> pd.Series:
+    yq = YearQuarter.last_confirmed(year, month)
+    return load_by_quarter(title, yq.year, yq.quarter)
+
+
+def load_many(title: str, year: int, month: int, num: int) -> list[pd.Series]:
+    last = YearQuarter.last_confirmed(year, month)
+    return [load_by_quarter(title, yq.year, yq.quarter) for yq in [last.minus(i) for i in range(num)]]
+
+
+def load_and_sum(title: str, year: int, month: int, num: int) -> pd.Series:
+    df = pd.DataFrame()
+    count = 0
+    for one in load_many(title, year, month, num):
+        df = df.merge(one.rename(f"{one.name}_{count}"), how="outer", left_index=True, right_index=True)
+        count += 1
+
+    # fixme: na를 그냥 drop 시키면 종목 누락인데, fillna 합리적으로 할 수 있는 방법을 찾아봐야 함.
+    result = df.dropna().sum(axis=1)
+    result.name = title
+    return result
+
+
+def load_and(
+    title: str, year: int, month: int, num: int,
+    operator: Callable[[list[pd.Series]], pd.Series],
+) -> pd.Series:
+    return operator(load_many(title, year, month, num))

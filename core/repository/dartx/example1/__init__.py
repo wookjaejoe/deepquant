@@ -211,30 +211,30 @@ def put_together(df: pd.DataFrame):
 
     # 2022년 4분기 매출액: 당해년도_매출액 - sum(2022-1,2,3분기매출액)
     df["분기매출액"] = df["당해년도_매출액"] - sum([
-        ds.load_by_quart("매출액", 2022, 1),
-        ds.load_by_quart("매출액", 2022, 2),
-        ds.load_by_quart("매출액", 2022, 3)
+        ds.load_by_quarter("매출액", 2022, 1),
+        ds.load_by_quarter("매출액", 2022, 2),
+        ds.load_by_quarter("매출액", 2022, 3)
     ])
 
     df["분기영업이익"] = df["당해년도_영업이익"] - sum([
-        ds.load_by_quart("영업이익", 2022, 1),
-        ds.load_by_quart("영업이익", 2022, 2),
-        ds.load_by_quart("영업이익", 2022, 3)
+        ds.load_by_quarter("영업이익", 2022, 1),
+        ds.load_by_quarter("영업이익", 2022, 2),
+        ds.load_by_quarter("영업이익", 2022, 3)
     ])
 
     df["분기순이익"] = df["당해년도_당기순이익"] - sum([
-        ds.load_by_quart("당기순이익", 2022, 1),
-        ds.load_by_quart("당기순이익", 2022, 2),
-        ds.load_by_quart("당기순이익", 2022, 3)
+        ds.load_by_quarter("당기순이익", 2022, 1),
+        ds.load_by_quarter("당기순이익", 2022, 2),
+        ds.load_by_quarter("당기순이익", 2022, 3)
     ])
 
     def qoq(title: str):
-        x = ds.load_by_quart(title, 2021, 4)
+        x = ds.load_by_quarter(title, 2021, 4)
         y = df[f"분기{title}"]
         return (y - x) / x
 
     def qoq_with_asset(title: str):
-        return (df[f"분기{title}"] / df["당해년도_자산총계"]) - (ds.load_by_quart(title, 2021, 4) / df["직전년도_자산총계"])
+        return (df[f"분기{title}"] / df["당해년도_자산총계"]) - (ds.load_by_quarter(title, 2021, 4) / df["직전년도_자산총계"])
 
     df["매출액_QoQ"] = qoq("매출액")
     df["영업이익_QoQ"] = qoq("영업이익")

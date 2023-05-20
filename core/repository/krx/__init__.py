@@ -5,7 +5,7 @@ from pandas import DataFrame
 from pykrx.website.krx.market.core import 개별종목시세, 전종목시세
 from pykrx.website.krx.market.ticker import get_stock_ticker_isin
 
-from datetime import date
+from datetime import date, timedelta
 
 
 def get_ohlcv_by_ticker(fromdate: str, todate: str, ticker: str, adjusted: bool = True) -> DataFrame:
@@ -58,3 +58,10 @@ def get_ohlcv_by_date(date_: date):
     })
     df = df.sort_index()
     return df
+
+
+def get_ohlcv_latest():
+    for i in range(10):
+        df = get_ohlcv_by_date(date.today() - timedelta(days=i))
+        if len(df[df["vol"] != 0]) / len(df) > 0.95:
+            return df

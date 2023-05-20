@@ -26,7 +26,7 @@ class DsCollection:
         return cls.col.count_documents({"_id": _id(title, year, quarter)}) > 0
 
     @classmethod
-    def insert_one(cls, raw: dict, title: str, year: int, quarter: int = None):
+    def insert_one(cls, raw: dict, title: str, year: int, quarter: int):
         assert quarter is None or quarter in [1, 2, 3, 4]
         # noinspection DuplicatedCode
         assert raw
@@ -45,5 +45,5 @@ class DsCollection:
         cls.col.insert_one(raw)
 
     @classmethod
-    def fetch_one(cls, title: str, year: int, quarter: int = None) -> dict:
+    def fetch_one(cls, title: str, year: int, quarter: int) -> dict:
         return cls.col.find_one({"_id": _id(title, year, quarter)})

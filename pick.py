@@ -1,9 +1,7 @@
-from datetime import date
-
 import numpy as np
 
 from core.repository import load_financial
-from core.repository.krx import get_ohlcv_by_date
+from core.repository.krx import get_ohlcv_latest
 from core.strategy import recipe
 
 colname_alias = {
@@ -17,9 +15,8 @@ colname_alias = {
     "영업활동으로인한현금흐름": "CF"
 }
 
-table = get_ohlcv_by_date(date(2023, 5, 4)).set_index("code")
-financial_data = load_financial(2023, 4)
-table = table.join(load_financial(2023, 4))
+table = get_ohlcv_latest().set_index("code")
+table = table.join(load_financial(2023, 5))
 table.update(table[table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
 table.rename(columns=colname_alias, inplace=True)
 
@@ -40,7 +37,7 @@ recipes = {
         "R/A_QoQ": 1,
         "GP/A_QoQ": 1,
         "O/A_QoQ": 1,
-        "E/A_QoQ": 1
+        "E/A_QoQ": 1,
     },
     "recipe": recipe,
     "recipe2": {
