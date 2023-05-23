@@ -47,30 +47,49 @@ def load_financial(year, month) -> pd.DataFrame:
     result["직전자산총계"] = load_one("자본총계", year - 1, month)
     result["BIS_QoQ"] = (result["자본총계"] / result["자산총계"]) - (result["직전자본총계"] / result["직전자산총계"])
 
-    result["R_YoY"] = xox(load_and_sum("매출액", year - 1, month, 4), result["매출액"])
-    result["GP_YoY"] = xox(load_and_sum("매출총이익", year - 1, month, 4), result["매출총이익"])
-    result["O_YoY"] = xox(load_and_sum("영업이익", year - 1, month, 4), result["영업이익"])
-    result["E_YoY"] = xox(load_and_sum("당기순이익", year - 1, month, 4), result["당기순이익"])
+    # YoY Series
+
+    result["R_YoY"] = xox(load_and_sum("매출액", year - 1, month, 4), load_and_sum("매출액", year, month, 4))
+    result["GP_YoY"] = xox(load_and_sum("매출총이익", year - 1, month, 4), load_and_sum("매출총이익", year, month, 4))
+    result["O_YoY"] = xox(load_and_sum("영업이익", year - 1, month, 4), load_and_sum("영업이익", year, month, 4))
+    result["E_YoY"] = xox(load_and_sum("당기순이익", year - 1, month, 4), load_and_sum("당기순이익", year, month, 4))
+
+    def profit_yoy(profit: str, based: str):
+        bef = load_and_sum(profit, year - 1, month, 4) / load_one(based, year - 1, month)
+        aft = load_and_sum(profit, year, month, 4) / load_one(based, year, month)
+        return aft - bef
+
+    result["R/A_YoY"] = profit_yoy("매출액", "자산총계")
+    result["GP/A_YoY"] = profit_yoy("매출총이익", "자산총계")
+    result["O/A_YoY"] = profit_yoy("영업이익", "자산총계")
+    result["E/A_YoY"] = profit_yoy("당기순이익", "자산총계")
+
+    result["R/EQ_YoY"] = profit_yoy("매출액", "자본총계")
+    result["GP/EQ_YoY"] = profit_yoy("매출총이익", "자본총계")
+    result["O/EQ_YoY"] = profit_yoy("영업이익", "자본총계")
+    result["E/EQ_YoY"] = profit_yoy("당기순이익", "자본총계")
+
+    # QoQ Series
 
     result["R_QoQ"] = xox(load_one("매출액", year - 1, month), load_one("매출액", year, month))
     result["GP_QoQ"] = xox(load_one("매출총이익", year - 1, month), load_one("매출총이익", year, month))
     result["O_QoQ"] = xox(load_one("영업이익", year - 1, month), load_one("영업이익", year, month))
     result["E_QoQ"] = xox(load_one("당기순이익", year - 1, month), load_one("당기순이익", year, month))
 
-    def profit_ratio(profit: str, based: str):
-        aft = load_one(profit, year, month) / load_one(based, year, month)
+    def profit_qoq(profit: str, based: str):
         bef = load_one(profit, year - 1, month) / load_one(based, year - 1, month)
+        aft = load_one(profit, year, month) / load_one(based, year, month)
         return aft - bef
 
-    result["R/A_QoQ"] = profit_ratio("매출액", "자산총계")
-    result["GP/A_QoQ"] = profit_ratio("매출총이익", "자산총계")
-    result["O/A_QoQ"] = profit_ratio("영업이익", "자산총계")
-    result["E/A_QoQ"] = profit_ratio("당기순이익", "자산총계")
+    result["R/A_QoQ"] = profit_qoq("매출액", "자산총계")
+    result["GP/A_QoQ"] = profit_qoq("매출총이익", "자산총계")
+    result["O/A_QoQ"] = profit_qoq("영업이익", "자산총계")
+    result["E/A_QoQ"] = profit_qoq("당기순이익", "자산총계")
 
-    result["R/EQ_QoQ"] = profit_ratio("매출액", "자본총계")
-    result["GP/EQ_QoQ"] = profit_ratio("매출총이익", "자본총계")
-    result["O/EQ_QoQ"] = profit_ratio("영업이익", "자본총계")
-    result["E/EQ_QoQ"] = profit_ratio("당기순이익", "자본총계")
+    result["R/EQ_QoQ"] = profit_qoq("매출액", "자본총계")
+    result["GP/EQ_QoQ"] = profit_qoq("매출총이익", "자본총계")
+    result["O/EQ_QoQ"] = profit_qoq("영업이익", "자본총계")
+    result["E/EQ_QoQ"] = profit_qoq("당기순이익", "자본총계")
 
     result["확정실적"] = YearQuarter.last_confirmed(year, month)
     result.replace([np.inf, -np.inf], np.nan, inplace=True)

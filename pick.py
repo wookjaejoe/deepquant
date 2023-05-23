@@ -28,16 +28,18 @@ recipes = {
         "GP/P": 1,
         "EQ/P": 1,
     },
+    "성장_단순이익": {f"{e}_QoQ": 1 for e in ["R", "GP", "O", "E"]},
+    "성장_자산대비이익": {f"{e}/A_QoQ": 1 for e in ["R", "GP", "O", "E"]},
+    "성장_자본대비이익": {f"{e}/EQ_QoQ": 1 for e in ["R", "GP", "O", "E"]},
+    "성장_매출종합": {f"R{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
+    "성장_매출총이익종합": {f"GP{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
+    "성장_영업이익종합": {f"O{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
+    "성장_순이익종합": {f"E{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
     "성장": {
-        "R_QoQ": 1,
-        "GP_QoQ": 1,
-        "O_QoQ": 1,
-        "E_QoQ": 1,
-
-        "R/A_QoQ": 1,
-        "GP/A_QoQ": 1,
-        "O/A_QoQ": 1,
-        "E/A_QoQ": 1,
+        "성장_매출총이익종합": 5,
+        "성장_영업이익종합": 4,
+        "성장_순이익종합": 3,
+        "성장_매출종합": 2,
     },
     "recipe": recipe,
     "recipe2": {
@@ -51,6 +53,7 @@ recipes = {
 factors = ["GP/P", "EQ/P", "P", "BIS"]
 factors += [f"{k}_QoQ" for k in ["R", "GP", "O", "E"]]
 factors += [f"{k}/A_QoQ" for k in ["R", "GP", "O", "E"]]
+factors += [f"{k}/EQ_QoQ" for k in ["R", "GP", "O", "E"]]
 for x1 in ["R", "GP", "O", "E"]:
     for x2 in ["A", "EQ"]:
         factor = f"{x1}/{x2}"
@@ -84,18 +87,18 @@ def append_tag(selector, f: str):
     table.loc[selector, "tags"] = table.loc[selector, "tags"].apply(lambda x: x + f", {f}" if x else f)
 
 
-append_tag(table["R/A_pct"] < 0.1, "저 R/A")
-append_tag(table["GP/A_pct"] < 0.1, "저 GP/A")
-append_tag(table["O/A_pct"] < 0.1, "저 O/A")
-append_tag(table["E/A_pct"] < 0.1, "저 E/A")
+append_tag(table["R/A_pct"] < 0.10, "저 R/A")
+append_tag(table["GP/A_pct"] < 0.10, "저 GP/A")
+append_tag(table["O/A_pct"] < 0.10, "저 O/A")
+append_tag(table["E/A_pct"] < 0.10, "저 E/A")
 
-append_tag(table["GP/EQ_pct"] < 0.1, "저 R/EQ")
-append_tag(table["GP/EQ_pct"] < 0.1, "저 GP/EQ")
-append_tag(table["O/EQ_pct"] < 0.1, "저 O/EQ")
-append_tag(table["E/EQ_pct"] < 0.1, "저 E/EQ")
+append_tag(table["GP/EQ_pct"] < 0.10, "저 R/EQ")
+append_tag(table["GP/EQ_pct"] < 0.10, "저 GP/EQ")
+append_tag(table["O/EQ_pct"] < 0.10, "저 O/EQ")
+append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
-table = table[["recipe_rank", "name", "close", "벨류_pct", "성장_pct", "tags"]]
+table = table[["recipe_rank", "recipe2_rank", "name", "close", "P", "GP", "벨류_pct", "성장_pct", "tags"]]
 table.to_csv("pick.csv")
 print("Done.")
