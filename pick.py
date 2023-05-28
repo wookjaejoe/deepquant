@@ -41,11 +41,15 @@ recipes = {
         "성장_순이익종합": 3,
         "성장_매출종합": 2,
     },
-    "recipe": recipe,
-    "recipe2": {
+    "v3": recipe,
+    "v4": {
         "P": -1,
         "벨류": 1,
         "성장": 1
+    },
+    "recipe": {
+        "v3": 1,
+        "v4": 1
     }
 }
 
@@ -73,12 +77,10 @@ for name, recipe in recipes.items():
     sv = sum([weighted(table[f"{k}_pct"], w) for k, w in recipe.items()])
     # 2. 위의 시리즈에 가중치의 총합을 나눈다 => 0~1 사이 값으로 일반화됨
     sv = sv / sum([abs(w) for w in recipe.values()])
-    # 3. 표준정규화
+
     table[name] = sv
     table[f"{name}_rank"] = np.ceil(table[name].rank(ascending=False, method="min"))
     table[f"{name}_pct"] = table[name].rank(method="min", pct=True)
-
-table = table.sort_values("recipe", ascending=False)
 
 table["tags"] = ""
 
@@ -99,6 +101,7 @@ append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
-table = table[["recipe_rank", "recipe2_rank", "name", "close", "P", "GP", "벨류_pct", "성장_pct", "tags"]]
+table = table.sort_values("recipe_rank")
+table = table[["v3_rank", "v4_rank", "recipe_rank", "name", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]]
 table.to_csv("pick.csv")
 print("Done.")
