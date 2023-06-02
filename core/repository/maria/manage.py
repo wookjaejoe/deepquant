@@ -8,6 +8,8 @@ from base.timeutil import YearMonth
 from core.repository.krx import get_ohlcv_by_ticker
 from core.repository.maria.conn import MariaConnection, maria_home
 
+from concurrent.futures import ThreadPoolExecutor
+
 db = maria_home()
 
 
@@ -42,33 +44,30 @@ def drop_table_if_exists(table_name: str):
         conn.query(f"drop table if exists {table_name}")
 
 
+def update_chart_by_code(code: str, table_name: str):
+    print(code)
+    df = get_ohlcv_by_ticker(
+        fromdate='20000101',
+        todate=(date.today() - timedelta(days=1)).strftime('%Y%m%d'),
+        ticker=code,
+    )
+    df["code"] = code
+    df.set_index(["code", "date"], inplace=True)
+    df.sort_index(inplace=True)
+    df.to_sql(table_name, db, if_exists="append", index=True)
+    print()
+
+
 def update_chart(codes: list):
     todate = date.today().strftime('%Y%m%d')
     table_name = f"chart_{todate}"
 
-    drop_table_if_exists(table_name)
-    create_chart_table(table_name)
+    excludes = list(pd.read_sql(f"select distinct code from {table_name}", db)["code"])
+    codes = [code for code in codes if code not in excludes]
 
-    count = 0
-    for code in codes:
-        count += 1
-        print(f"[{count}/{len(codes)}] {code}")
-
-        try:
-            if len(pd.read_sql(f"select * from {table_name} where code = '{code}'", db)) > 0:
-                continue
-        except:
-            pass
-
-        df = get_ohlcv_by_ticker(
-            fromdate='20000101',
-            todate=(date.today() - timedelta(days=1)).strftime('%Y%m%d'),
-            ticker=code,
-        )
-        df["code"] = code
-        df.set_index(["code", "date"], inplace=True)
-        df.sort_index(inplace=True)
-        df.to_sql(table_name, db, if_exists="append", index=True)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
+        executor.map(update_chart_by_code, codes, [table_name] * len(codes))
 
     drop_table_if_exists("chart")
     create_chart_table("chart")
@@ -93,7 +92,7 @@ def update_stocks() -> DataFrame:
 
 
 def upload_chart_from_krx():
-    stocks = update_stocks()
+    stocks = pd.read_sql("select * from stock", maria_home())
     update_chart(list(stocks["code"]))
 
 

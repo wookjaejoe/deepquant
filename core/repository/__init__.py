@@ -131,7 +131,7 @@ def load_one(title: str, year: int, month: int) -> pd.Series:
     return load_by_quarter(title, yq.year, yq.quarter)
 
 
-def load_many(title: str, year: int, month: int, num: int) -> list[pd.Series]:
+def load_many(title: str, year: int, month: int, num: int) -> List[pd.Series]:
     last = YearQuarter.last_confirmed(year, month)
     return [load_by_quarter(title, yq.year, yq.quarter) for yq in [last.minus(i) for i in range(num)]]
 
@@ -151,6 +151,6 @@ def load_and_sum(title: str, year: int, month: int, num: int) -> pd.Series:
 
 def load_and(
     title: str, year: int, month: int, num: int,
-    operator: Callable[[list[pd.Series]], pd.Series],
+    operator: Callable[[List[pd.Series]], pd.Series],
 ) -> pd.Series:
     return operator(load_many(title, year, month, num))
