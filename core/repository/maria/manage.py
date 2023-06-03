@@ -62,12 +62,8 @@ def update_chart(codes: list):
     todate = date.today().strftime('%Y%m%d')
     table_name = f"chart_{todate}"
 
-    excludes = list(pd.read_sql(f"select distinct code from {table_name}", db)["code"])
-    codes = [code for code in codes if code not in excludes]
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
-        executor.map(update_chart_by_code, codes, [table_name] * len(codes))
+    for code in codes:
+        update_chart_by_code(code, table_name)
 
     drop_table_if_exists("chart")
     create_chart_table("chart")
