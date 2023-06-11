@@ -8,8 +8,6 @@ from base.timeutil import YearMonth
 from core.repository.krx import get_ohlcv_by_ticker
 from core.repository.maria.conn import MariaConnection, maria_home
 
-from concurrent.futures import ThreadPoolExecutor
-
 db = maria_home()
 
 
@@ -55,7 +53,6 @@ def update_chart_by_code(code: str, table_name: str):
     df.set_index(["code", "date"], inplace=True)
     df.sort_index(inplace=True)
     df.to_sql(table_name, db, if_exists="append", index=True)
-    print()
 
 
 def update_chart(codes: list):
