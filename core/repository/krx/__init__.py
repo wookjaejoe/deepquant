@@ -47,7 +47,7 @@ def get_ohlcv_by_date(date_: date):
     df.columns = [
         "code", "name",
         "open", "high", "low", "close", "cap", "exchange",
-        "changesRatio", "vol", "val", "shares",
+        "changesPct", "vol", "val", "shares",
     ]
     df = df.replace(r"[^-\w\.]", "", regex=True)
     df = df.replace(r"\-$", "0", regex=True)

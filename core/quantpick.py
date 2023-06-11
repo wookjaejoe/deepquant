@@ -20,7 +20,7 @@ class QuantPicker(Singleton):
         "name",
         "exchange",
         "price",
-        "changesRatio",
+        "changesPct",
         "P",
         # "control_kind",  # 감리구분: 정상, 주의, 경고, 위험예고, 위험
         # "supervision_kind",  # 관리구분: 일반, 관리
