@@ -41,13 +41,13 @@ def get_ohlcv_by_date(date_: date):
     df = 전종목시세().fetch(date_.strftime("%Y%m%d"), "ALL")
     df = df[[
         "ISU_SRT_CD", "ISU_ABBRV",
-        "TDD_OPNPRC", "TDD_HGPRC", "TDD_LWPRC", "TDD_CLSPRC", "MKTCAP",
-        "ACC_TRDVOL", "ACC_TRDVAL", "LIST_SHRS",
+        "TDD_OPNPRC", "TDD_HGPRC", "TDD_LWPRC", "TDD_CLSPRC", "MKTCAP", "MKT_NM",
+        "FLUC_RT", "ACC_TRDVOL", "ACC_TRDVAL", "LIST_SHRS",
     ]]
     df.columns = [
         "code", "name",
-        "open", "high", "low", "close", "cap",
-        "vol", "val", "shares",
+        "open", "high", "low", "close", "cap", "exchange",
+        "changesRatio", "vol", "val", "shares",
     ]
     df = df.replace(r"[^-\w\.]", "", regex=True)
     df = df.replace(r"\-$", "0", regex=True)

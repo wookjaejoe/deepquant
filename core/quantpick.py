@@ -3,16 +3,13 @@ import logging
 from datetime import date, datetime, timezone
 from threading import Thread
 
-import jsons
 import numpy as np
 import pandas as pd
-import websockets
 
 from base.coding import Singleton
-from config import config
 from core.repository import load_financial
+from core.repository.krx import get_ohlcv_latest
 from core.strategy import recipe
-from typing import *
 
 _logger = logging.getLogger(__name__)
 
@@ -23,13 +20,12 @@ class QuantPicker(Singleton):
         "name",
         "exchange",
         "price",
-        "yesterday_close",
+        "changesRatio",
         "P",
-        "control_kind",  # 감리구분: 정상, 주의, 경고, 위험예고, 위험
-        "supervision_kind",  # 관리구분: 일반, 관리
-        "status_kind",  # 주식상태: 정상, 거래정지, 거래중단
+        # "control_kind",  # 감리구분: 정상, 주의, 경고, 위험예고, 위험
+        # "supervision_kind",  # 관리구분: 일반, 관리
+        # "status_kind",  # 주식상태: 정상, 거래정지, 거래중단
         "super",
-        "super_percentile",
         "super_rank",
         "GP",
         "O",
@@ -53,7 +49,6 @@ class QuantPicker(Singleton):
         self.queue = asyncio.Queue()
         self.table = pd.DataFrame()
         self.updated = None
-        self.websocket: Optional[websockets.WebSocketClientProtocol] = None
 
         # 반드시 생성자 마지막에 호출되어야 함
         thread = Thread(target=self.work, daemon=True)
@@ -68,11 +63,8 @@ class QuantPicker(Singleton):
         event_loop.run_forever()
 
     async def init_table(self):
-        dest = config['stockrt']["url"]
-        ws = await asyncio.wait_for(websockets.connect(dest), timeout=10)
-        stocks = jsons.loads(await ws.recv())
         today = date.today()
-        self.table = pd.DataFrame(stocks).set_index("code")
+        self.table = get_ohlcv_latest().set_index("code")
         self.table = self.table.join(load_financial(today.year, today.month))
         self.table.update(self.table[self.table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
         self.table.rename(columns=self.colname_alias, inplace=True)
@@ -81,19 +73,10 @@ class QuantPicker(Singleton):
         """
         Stock RT 서버로부터 시세 변경 이벤트를 지속 수신하고 큐에 담는다.
         """
-        dest = config['stockrt']["url"] + "/subscribe"
+
         while True:
-            try:
-                _logger.info(f"Connecting websocket to {dest}")
-                self.websocket = await asyncio.wait_for(websockets.connect(dest), timeout=30)
-                while True:
-                    data = await self.websocket.recv()
-                    data = jsons.loads(data)
-                    await self.queue.put(data)
-            except Exception as e:
-                _logger.error("An error occured with websocket.", exc_info=e)
-                await self.websocket.close()
-                await asyncio.sleep(30)
+            await self.queue.put(get_ohlcv_latest().to_dict("records"))
+            await asyncio.sleep(60)
 
     async def listen_queue(self):
         while True:
@@ -142,12 +125,12 @@ class QuantPicker(Singleton):
         self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
         self.table = self.table.sort_values("super", ascending=False)
         self.table.to_csv("pick.csv")
-        print()
 
     def head(self, limit: int = 50) -> list:
         table = self.table.copy()
         table = table.sort_values(by="super", ascending=False)[:limit]
         table["code"] = table.index
+        table["price"] = table["close"]
         return list(table.loc[:, self.major_colums].T.to_dict().values())
 
     def get(self, code: str) -> dict:

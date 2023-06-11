@@ -7,5 +7,5 @@ picker = QuantPicker.instance()
 @app.get("/")
 def strategy():
     return {
-        "stockrtConnected": picker.websocket.open
+        "stockrtConnected": True
     }
