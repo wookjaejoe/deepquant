@@ -1,4 +1,9 @@
+import time
+import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
+from queue import Queue
+from threading import Thread
 
 import pandas as pd
 from pandas import DataFrame
@@ -17,8 +22,8 @@ def create_chart_table(table_name: str):
             f"""
             create table {table_name}
             (
-                date        date       not null,
                 code        varchar(8) not null,
+                date        date       not null,
                 open        int        null,
                 high        int        null,
                 low         int        null,
@@ -42,31 +47,83 @@ def drop_table_if_exists(table_name: str):
         conn.query(f"drop table if exists {table_name}")
 
 
-def update_chart_by_code(code: str, table_name: str):
-    print(code)
-    df = get_ohlcv_by_ticker(
-        fromdate='20000101',
-        todate=(date.today() - timedelta(days=1)).strftime('%Y%m%d'),
-        ticker=code,
-    )
-    df["code"] = code
-    df.set_index(["code", "date"], inplace=True)
-    df.sort_index(inplace=True)
-    df.to_sql(table_name, db, if_exists="append", index=True)
+class ChartTableGenerator:
+    def __init__(self, table_name):
+        self.queue = Queue()
+        self.table_name = table_name
+        self.fromdate = '20000101'
+        self.todate = (date.today() - timedelta(days=1)).strftime('%Y%m%d')
+
+    def _consume_queue(self):
+        while True:
+            df = self.queue.get()
+            if df is None:
+                break
+
+            try:
+                df.to_sql(self.table_name, db, if_exists="append", index=True)
+            except:
+                traceback.print_exc()
+
+    def _start_consume(self):
+        queue_consumer = Thread(target=self._consume_queue)
+        queue_consumer.start()
+
+    def _stop_consume(self):
+        self.queue.put(None)
+
+    # @retry(tries=5, delay=10)
+    def _fetch_ohlcv(self, code):
+        print(code)
+        try:
+            df = get_ohlcv_by_ticker(
+                fromdate=self.fromdate,
+                todate=self.todate,
+                ticker=code,
+            )
+            df["code"] = code
+            df = df.set_index(["code", "date"]).sort_index()
+            self.queue.put(df)
+        except KeyboardInterrupt as e:
+            raise e
+        except BaseException as e:
+            traceback.print_exc()
+
+    def run(self, codes: list):
+        self._start_consume()
+
+        try:
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
+                executor.map(self._fetch_ohlcv, codes)
+        finally:
+            while not self.queue.empty():
+                time.sleep(1)
+
+            print(f"Queue empty: {self.queue.empty()}")
+            print("Stop comsuming...")
+            self._stop_consume()
 
 
 def update_chart(codes: list):
+    print("Starting to update chart...")
+
     todate = date.today().strftime('%Y%m%d')
     table_name = f"chart_{todate}"
 
-    for code in codes:
-        update_chart_by_code(code, table_name)
+    excludes = list(pd.read_sql(f"select distinct code from {table_name}", maria_home())["code"])
+    codes = [code for code in codes if code not in excludes]
+
+    ChartTableGenerator(table_name).run(codes)
 
     drop_table_if_exists("chart")
-    create_chart_table("chart")
+
     with MariaConnection() as conn:
-        conn.query(f"insert into chart (select * from {table_name})")
+        conn.query(f"CREATE TABLE chart LIKE {table_name};")
+        conn.query(f"INSERT INTO chart SELECT * FROM {table_name};")
         conn.commit()
+
+    # todo: make primary key (code, date)
 
 
 def update_stocks() -> DataFrame:
