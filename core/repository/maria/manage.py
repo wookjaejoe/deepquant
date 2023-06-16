@@ -80,6 +80,7 @@ class ChartTableGenerator:
                 fromdate=self.fromdate,
                 todate=self.todate,
                 ticker=code,
+                adjusted=False
             )
             df["code"] = code
             df = df.set_index(["code", "date"]).sort_index()
@@ -111,7 +112,11 @@ def update_chart(codes: list):
     todate = date.today().strftime('%Y%m%d')
     table_name = f"chart_{todate}"
 
-    excludes = list(pd.read_sql(f"select distinct code from {table_name}", maria_home())["code"])
+    try:
+        excludes = list(pd.read_sql(f"select distinct code from {table_name}", maria_home())["code"])
+    except:
+        excludes = []
+
     codes = [code for code in codes if code not in excludes]
 
     ChartTableGenerator(table_name).run(codes)
