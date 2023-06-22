@@ -21,6 +21,15 @@ def drop_table_if_exists(table_name: str):
         conn.query(f"drop table if exists {table_name}")
 
 
+def create_primary_key(table_name: str, col_names: list, if_not_exists: bool = True):
+    col_names_str = ", ".join(col_names)
+    with db.connect() as conn:
+        if if_not_exists and db.execute(f"SHOW INDEX FROM {table_name} WHERE Key_name = 'PRIMARY';").rowcount > 0:
+            return
+
+        conn.execute(f"ALTER TABLE {table_name} ADD PRIMARY KEY ({col_names_str});")
+
+
 class ChartTableGenerator:
     def __init__(self, table_name):
         self.queue = Queue()
@@ -35,7 +44,7 @@ class ChartTableGenerator:
                 break
 
             try:
-                df.to_sql(self.table_name, db, if_exists="append", index=True)
+                df.to_sql(self.table_name, db, if_exists="append", index=True, dtype={'code': 'VARCHAR(6)'})
             except:
                 traceback.print_exc()
 
@@ -71,6 +80,9 @@ class ChartTableGenerator:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
                 executor.map(self._fetch_ohlcv, codes)
+
+            create_primary_key(table_name=self.table_name, col_names=["code", "date"])
+
         finally:
             while not self.queue.empty():
                 time.sleep(1)
