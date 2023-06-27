@@ -16,7 +16,7 @@ colname_alias = {
 }
 
 table = get_ohlcv_latest().set_index("code")
-table = table.join(load_financial(2023, 5))
+table = table.join(load_financial(2023, 6))
 table.update(table[table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
 table.rename(columns=colname_alias, inplace=True)
 
@@ -102,6 +102,6 @@ append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
 table = table.sort_values("recipe_rank")
-table = table[["v3_rank", "v4_rank", "recipe_rank", "name", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]]
+table = table[["v3_rank", "v4_rank", "recipe_rank", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]]
 table.to_csv("pick.csv")
 print("Done.")
