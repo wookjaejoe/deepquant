@@ -16,32 +16,6 @@ from core.repository.maria.conn import MariaConnection, maria_home
 db = maria_home()
 
 
-def create_chart_table(table_name: str):
-    with MariaConnection() as conn:
-        conn.query(
-            f"""
-            create table {table_name}
-            (
-                code        varchar(8) not null,
-                date        date       not null,
-                open        int        null,
-                high        int        null,
-                low         int        null,
-                close       int        null,
-                cap         bigint     null,
-                vol         bigint     null,
-                val         bigint     null,
-                shares      bigint     null,
-                primary key (code, date)
-            );
-            """
-        )
-        conn.commit()
-        conn.query(f"create index chart_code_index on {table_name} (code);")
-        conn.query(f"create index chart_date_index on {table_name} (date);")
-        conn.commit()
-
-
 def drop_table_if_exists(table_name: str):
     with MariaConnection() as conn:
         conn.query(f"drop table if exists {table_name}")
@@ -106,7 +80,7 @@ class ChartTableGenerator:
             self._stop_consume()
 
 
-def update_chart(codes: list):
+def upload_chart(codes: list):
     print("Starting to update chart...")
 
     todate = date.today().strftime('%Y%m%d')
@@ -148,10 +122,35 @@ def update_stocks() -> DataFrame:
 
 def upload_chart_from_krx():
     stocks = pd.read_sql("select * from stock", maria_home())
-    update_chart(list(stocks["code"]))
+    upload_chart(list(stocks["code"]))
 
 
-def create_month_chart_table(table_name: str):
+def _update_chart_by_code(code: str, fromdate: date, todate: date):
+    fromdate = fromdate.strftime('%Y%m%d')
+    todate = todate.strftime('%Y%m%d')
+    df = get_ohlcv_by_ticker(
+        fromdate=fromdate,
+        todate=todate,
+        ticker=code,
+        adjusted=False
+    )
+    df["code"] = code
+    df = df.set_index(["code", "date"]).sort_index()
+    df.to_sql("chart", db, if_exists="append", index=True)
+    print()
+
+
+def update_chart(fromdate: date):
+    stocks = pd.read_sql("select * from stock", maria_home())
+    codes = stocks["code"]
+    num = 1
+    for code in codes:
+        print(f"[{num}/{len(codes)}]", code)
+        _update_chart_by_code(code, fromdate, date.today() - timedelta(days=1))
+        num += 1
+
+
+def _create_month_chart_table(table_name: str):
     with MariaConnection() as conn:
         conn.query(
             f"""
@@ -208,7 +207,7 @@ def upload_month_chart():
     table_name = f"month_chart_{todate}"
 
     drop_table_if_exists(table_name)
-    create_month_chart_table(table_name)
+    _create_month_chart_table(table_name)
 
     dates = pd.read_sql("select distinct date from chart", maria_home())["date"]
     yms = sorted({YearMonth.from_date(d) for d in dates})
@@ -218,7 +217,7 @@ def upload_month_chart():
         insert_month_chart(table_name, ym.year, ym.month)
 
     drop_table_if_exists("month_chart")
-    create_month_chart_table("month_chart")
+    _create_month_chart_table("month_chart")
     with MariaConnection() as conn:
         conn.query(f"insert into month_chart (select * from {table_name})")
         conn.commit()
