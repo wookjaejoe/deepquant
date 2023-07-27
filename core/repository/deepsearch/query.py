@@ -2,7 +2,9 @@ import json
 import logging
 from datetime import date
 
+from requests.exceptions import Timeout
 from requests import get
+from retry import retry
 
 from base.timeutil import YearQuarter
 from config import config
@@ -10,22 +12,13 @@ from config import config
 _logger = logging.getLogger(__name__)
 
 
-def query(title: str, year: int, quarter: int = None):
-    _logger.info(f"Requesting query - title={title}, year={year}, quarter={quarter}")
-
-    today = date.today()
-    last_confirmed = YearQuarter.last_confirmed(today.year, today.month)
-    if quarter:
-        assert last_confirmed >= YearQuarter(year, quarter)
-        params = {'input': f'상장 기업 and {title} {year}년 {quarter}분기'}
-    else:
-        assert last_confirmed >= YearQuarter(year, 4)
-        params = {'input': f'상장 기업 and {title} {year}'}
-
+@retry(exceptions=Timeout, tries=5, delay=1, logger=_logger)
+def _query(params):
     response = get(
         'https://api.deepsearch.com/v1/compute',
         params=params,
-        headers={'Authorization': config['deepSearchAuth']}
+        headers={'Authorization': config['deepSearchAuth']},
+        timeout=30
     )
 
     assert response.status_code == 200, f'Response code not 200, actual - {response.status_code}'
@@ -41,3 +34,22 @@ def query(title: str, year: int, quarter: int = None):
     return content
 
 
+def query2(stock_code: str, titles: list[str], fromyear: int, toyear: int):
+    titles = " ".join(titles)
+    params = {"input": f"KRX:{stock_code} {fromyear}-{toyear} 분기 {titles}"}
+    return _query(params)
+
+
+def query(title: str, year: int, quarter: int = None):
+    _logger.info(f"Requesting query - title={title}, year={year}, quarter={quarter}")
+
+    today = date.today()
+    last_confirmed = YearQuarter.last_confirmed(today.year, today.month)
+    if quarter:
+        assert last_confirmed >= YearQuarter(year, quarter)
+        params = {'input': f'상장 기업 and {title} {year}년 {quarter}분기'}
+    else:
+        assert last_confirmed >= YearQuarter(year, 4)
+        params = {'input': f'상장 기업 and {title} {year}'}
+
+    return _query(params)

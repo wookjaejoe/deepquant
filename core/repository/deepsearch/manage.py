@@ -1,50 +1,89 @@
-import time
+import logging
+from datetime import date
 
+import dart_fss as dart
+from pymongo import MongoClient
+
+from config import config
+from core.repository.dartx import OpenDartApiKey
+from core.repository.deepsearch.query import query2
 from base import log
-from base.timeutil import YearQuarter
-from core.repository.deepsearch import query as dsquery
-from core.repository.mongo import DsCollection
+from core.repository.krx import get_ohlcv_latest
+from retry import retry
 
 log.init()
 
 titles = [
-    "자본총계", "자산총계", "부채총계",
-    "매출액", "매출총이익", "영업이익", "당기순이익"
+    "자본총계", "자산총계", "유동자산",
+    "매출액", "매출총이익", "영업이익", "당기순이익",
+    "영업활동현금흐름"
 ]
 
+_logger = logging.getLogger(__name__)
+_client = MongoClient(config["mongo"]["url"])
+_col = _client["finance"]["ds_corp"]
 
-def fetch_and_update(title: str, year: int, quarter: int):
-    # fetch
-    content = dsquery.query(title, year, quarter)
-    # insert
-    DsCollection.insert_one(
-        content,
-        title=title,
-        year=year,
-        quarter=quarter
-    )
+dart.set_api_key(OpenDartApiKey.next())
 
 
-def collect(year: int, quarter: int):
-    for title in titles:
+def collect(stock_code):
+    _col.insert_one({
+        "code": stock_code,
+        "content": query2(stock_code, titles, 2000, 2023)
+    })
+
+
+@retry(tries=3, delay=10, logger=_logger)
+def report_exists(corp):
+    dart.set_api_key(OpenDartApiKey.next())
+    try:
+        search_result = corp.search_filings(
+            bgn_de="20000101",
+            end_de=date.today().strftime('%Y%m%d'),
+            last_reprt_at="Y",
+            pblntf_ty="A",
+        )
+    except dart.errors.NoDataReceived:
+        return False
+
+    return len(search_result) > 0
+
+
+def nho(s: str):
+    try:
+        int(s[-2])
+        return s.endswith("호")
+    except:
+        return False
+
+
+def main():
+    corp_list = [c for c in dart.get_corp_list()
+                 if c.stock_code and "스팩" not in c.corp_name and not nho(c.corp_name)]
+    _logger.info(f"Ready for {len(corp_list)} corps")
+
+    stocks = get_ohlcv_latest().set_index("code")
+
+    def cap(stock_code):
         try:
-            fetch_and_update(title, year, quarter)
+            return stocks.loc[stock_code]["cap"]
         except:
-            print(f"[WARN] The 'fetch_and_update' failed once.")
-            time.sleep(5)
-            fetch_and_update(title, year, quarter)
+            return -1
 
+    corp_list.sort(key=lambda c: cap(c.stock_code), reverse=True)
 
-def collect_many(start: YearQuarter, end: YearQuarter):
-    query_list = []
-    for title in titles:
-        for q in start.to(end):
-            query_list.append((title, q))
+    for corp in corp_list:
+        if _col.count_documents({"code": corp.stock_code}) > 0:
+            _logger.info(f"Skipping for {corp}")
+            continue
 
-    count = 0
-    for query_item in query_list:
-        count += 1
-        title = query_item[0]
-        quarter = query_item[1]
-        print(f"[{count}/{len(query_list)}]", title, quarter)
-        collect(year=quarter.year, quarter=quarter.quarter)
+        if not report_exists(corp):
+            _logger.info(f"Skipping for {corp}")
+            continue
+
+        try:
+            _logger.info(f"Collecting for {corp}")
+            collect(corp.stock_code)
+        except Exception as e:
+            # _logger.error(f"Failure about {corp}", exc_info=e)
+            _logger.error(f"Failure about {corp}")
