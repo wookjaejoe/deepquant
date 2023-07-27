@@ -22,16 +22,9 @@ class QuantPicker(Singleton):
         "price",
         "changesPct",
         "P",
-        # "control_kind",  # 감리구분: 정상, 주의, 경고, 위험예고, 위험
-        # "supervision_kind",  # 관리구분: 일반, 관리
-        # "status_kind",  # 주식상태: 정상, 거래정지, 거래중단
         "super",
         "super_rank",
-        "GP",
-        "O",
-        "E",
-        *recipe.keys(),
-        *[f"{k}_percentile" for k in recipe.keys()]
+        "tags"
     ]
 
     colname_alias = {
@@ -76,7 +69,7 @@ class QuantPicker(Singleton):
 
         while True:
             await self.queue.put(get_ohlcv_latest().to_dict("records"))
-            await asyncio.sleep(60)
+            await asyncio.sleep(60 * 10)
 
     async def listen_queue(self):
         while True:
@@ -101,13 +94,19 @@ class QuantPicker(Singleton):
             await asyncio.sleep(0)
 
     def rerank(self):
-        self.table["R/P"] = self.table["R"] / self.table["P"]
-        self.table["GP/P"] = self.table["GP"] / self.table["P"]
+        factors = set(recipe.keys())
+
+        for x in ["R", "GP", "O", "E"]:
+            for y in ["P", "A", "EQ"]:
+                factor = f"{x}/{y}"
+                self.table[factor] = self.table[x] / self.table[y]
+                factors.add(factor)
+
         self.table["EQ/P"] = self.table["EQ"] / self.table["P"]
 
         # 개별 팩터들의 pct 계산
-        for factor in recipe.keys():
-            colname_rank = f"{factor}_percentile"
+        for factor in factors:
+            colname_rank = f"{factor}_pct"
             self.table[colname_rank] = self.table[factor].rank(method="min", pct=True)
 
         def weighted(pct: float, w: float):
@@ -116,15 +115,29 @@ class QuantPicker(Singleton):
 
         # super 팩터 계산
         # 1. 레시피를 구성하는 개별 팩터 분위(percentile) * 가중치의 총합을 구함
-        sv = sum([weighted(self.table[f"{k}_percentile"], w) for k, w in recipe.items()])
+        sv = sum([weighted(self.table[f"{k}_pct"], w) for k, w in recipe.items()])
         # 2. 위의 시리즈에 가중치의 총합을 나눈다 => 0~1 사이 값으로 일반화됨
         sv = sv / sum([abs(w) for w in recipe.values()])
         # 3. 표준정규화
-        sn = (sv - sv.mean()) / sv.std()
         self.table["super"] = sv
         self.table["super_rank"] = np.ceil(self.table["super"].rank(ascending=False, method="min"))
+
+        self.table["tags"] = ""
+        self.attach_tag(self.table["R/A_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["GP/A_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["O/A_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["E/A_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["GP/EQ_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["GP/EQ_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["O/EQ_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["E/EQ_pct"] < 0.10, "낮은 수익성")
+        self.attach_tag(self.table["open"] == 0, "거래정지")
         self.table = self.table.sort_values("super", ascending=False)
-        self.table.to_csv("pick.csv")
+        # self.table.to_csv("pick.csv")
+
+    def attach_tag(self, selector, tag: str):
+        selector = selector & ~self.table["tags"].str.contains(tag)
+        self.table.loc[selector, "tags"] += f"{tag};"
 
     def head(self, limit: int = 50) -> list:
         table = self.table.copy()
