@@ -6,6 +6,9 @@ import pandas as pd
 from base.timeutil import YearQuarter
 from core.base.quantutil import xox
 from core.repository.mongo import ds
+from core.repository.maria.conn import maria_home
+
+db = maria_home()
 
 
 def merge(*data_list) -> pd.DataFrame:
@@ -21,14 +24,68 @@ def merge(*data_list) -> pd.DataFrame:
     return result
 
 
-FINANIAL_ALIAS = {
+FinanceAlias = {
     "자산총계": "A",  # Asset
     "자본총계": "EQ",  # Equity
     "매출액": "R",  # Revenue
     "매출총이익": "GP",  # Gross Profit
     "영업이익": "O",  # Operating Income
-    "당기순이익": "N",  # Net Income
+    "당기순이익": "E",  # Net Income
 }
+
+
+class Growth:
+    @staticmethod
+    def rate(aft: pd.Series, pre: pd.Series) -> pd.Series:
+        return (aft - pre) / abs(pre)
+
+
+class FinanceLoader:
+    def __init__(self):
+        self._table = pd.read_sql(f"select * from finance", db).set_index("code")
+
+    def _load_from_table(self, yq: YearQuarter):
+        return self._table[(self._table["year"] == yq.year) & (self._table["quarter"] == yq.quarter)]
+
+    def load(self, yq: YearQuarter):
+        # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
+        fins = [self._load_from_table(yq.minus(i)) for i in range(6)]
+        result = pd.DataFrame()
+        result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
+        result["순유동자산"] = fins[0]["유동자산"] - result["부채총계"]
+        result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
+        result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
+        result["A"] = fins[0]["자산총계"]
+        result["EQ"] = fins[0]["자본총계"]
+
+        # 손익계산서 4개분기 합
+        is_cols = ["매출액", "매출총이익", "영업이익", "당기순이익"]
+        for col in is_cols:
+            df = pd.DataFrame()
+            for i in range(4):
+                df = df.merge(fins[i][col].rename(str(i)), how="outer", left_index=True, right_index=True)
+
+            result[f"{FinanceAlias[col]}/Y"] = df.sum(axis=1)
+
+        for col in is_cols:
+            col_alias = FinanceAlias[col]
+            result[f"{col_alias}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
+
+        for col in is_cols:
+            col_alias = FinanceAlias[col]
+            result[f"{col_alias}_QoQA"] = (Growth.rate(fins[0][col], fins[4][col]) -
+                                           Growth.rate(fins[1][col], fins[5][col]))
+
+        bs_cols = ["자산총계", "자본총계"]
+        for is_col in is_cols:
+            for bs_col in bs_cols:
+                name = f"{FinanceAlias[is_col]}/{FinanceAlias[bs_col]}_QoQ"
+                result[name] = fins[0][is_col] / fins[0][bs_col] - fins[4][is_col] / fins[4][bs_col]
+
+        # todo 언제시점 자본, 자산을 참조하는게 맞을까?
+        # todo 성장가속 전분기대비
+        # todo 등수 말고 포지션으로?
+        return result
 
 
 def load_financial(year, month) -> pd.DataFrame:
@@ -97,28 +154,6 @@ def load_financial(year, month) -> pd.DataFrame:
     return result
 
 
-def pre_load_financial_with_2022_4q():
-    """
-    ./core/repository/dartx/example1 과 함께 사용할 수 있는 함수.
-    당장 사용할 일이 없음 2024년 초 쯤에 다시 한번 사용하게 될지도?
-    """
-    raw = pd.read_csv("2022-4Q.csv", dtype={"code": str}).set_index("code")
-    result = merge(
-        raw["당해년도_자산총계"].rename("자산총계"),
-        raw["당해년도_자본총계"].rename("자본총계"),
-        raw["당해년도_매출액"].rename("매출액"),
-        raw["당해년도_영업이익"].rename("영업이익"),
-    )
-
-    result["R_QoQ"] = raw["매출액_QoQ"]
-    result["R/A_QoQ"] = raw["매출액/자산총계_QoQ"]
-    result["O_QoQ"] = raw["영업이익_QoQ"]
-    result["O/A_QoQ"] = raw["영업이익/자산총계_QoQ"]
-
-    result["확정실적"] = YearQuarter(2022, 4)
-    return result
-
-
 def load_by_quarter(title: str, year: int, quarter: int) -> pd.Series:
     try:
         return ds.load_by_quarter(title=title, year=year, quarter=quarter)
@@ -150,7 +185,7 @@ def load_and_sum(title: str, year: int, month: int, num: int) -> pd.Series:
 
 
 def load_and(
-    title: str, year: int, month: int, num: int,
-    operator: Callable[[List[pd.Series]], pd.Series],
+        title: str, year: int, month: int, num: int,
+        operator: Callable[[List[pd.Series]], pd.Series],
 ) -> pd.Series:
     return operator(load_many(title, year, month, num))

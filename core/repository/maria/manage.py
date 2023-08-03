@@ -1,9 +1,5 @@
-import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
-from queue import Queue
-from threading import Thread
 
 import pandas as pd
 from pandas import DataFrame
@@ -21,63 +17,23 @@ def drop_table_if_exists(table_name: str):
         conn.query(f"drop table if exists {table_name}")
 
 
-class ChartTableGenerator:
-    def __init__(self, table_name):
-        self.queue = Queue()
-        self.table_name = table_name
-        self.fromdate = '20000101'
-        self.todate = (date.today() - timedelta(days=1)).strftime('%Y%m%d')
-
-    def _consume_queue(self):
-        while True:
-            df = self.queue.get()
-            if df is None:
-                break
-
-            try:
-                df.to_sql(self.table_name, db, if_exists="append", index=True)
-            except:
-                traceback.print_exc()
-
-    def _start_consume(self):
-        queue_consumer = Thread(target=self._consume_queue)
-        queue_consumer.start()
-
-    def _stop_consume(self):
-        self.queue.put(None)
-
-    # @retry(tries=5, delay=10)
-    def _fetch_ohlcv(self, code):
+def collect_chart(codes: list[str], table_name: str, fromdate: str, todate: str):
+    for code in codes:
         print(code)
         try:
             df = get_ohlcv_by_ticker(
-                fromdate=self.fromdate,
-                todate=self.todate,
+                fromdate=fromdate,
+                todate=todate,
                 ticker=code,
                 adjusted=False
             )
             df["code"] = code
             df = df.set_index(["code", "date"]).sort_index()
-            self.queue.put(df)
+            df.to_sql(table_name, db, if_exists="append", index=True)
         except KeyboardInterrupt as e:
             raise e
         except BaseException as e:
             traceback.print_exc()
-
-    def run(self, codes: list):
-        self._start_consume()
-
-        try:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
-                executor.map(self._fetch_ohlcv, codes)
-        finally:
-            while not self.queue.empty():
-                time.sleep(1)
-
-            print(f"Queue empty: {self.queue.empty()}")
-            print("Stop comsuming...")
-            self._stop_consume()
 
 
 def upload_chart(codes: list):
@@ -93,7 +49,11 @@ def upload_chart(codes: list):
 
     codes = [code for code in codes if code not in excludes]
 
-    ChartTableGenerator(table_name).run(codes)
+    collect_chart(
+        codes, table_name,
+        fromdate="20000101",
+        todate=(date.today() - timedelta(days=1)).strftime('%Y%m%d')
+    )
 
     drop_table_if_exists("chart")
 
@@ -137,17 +97,29 @@ def _update_chart_by_code(code: str, fromdate: date, todate: date):
     df["code"] = code
     df = df.set_index(["code", "date"]).sort_index()
     df.to_sql("chart", db, if_exists="append", index=True)
-    print()
 
 
-def update_chart(fromdate: date):
-    stocks = pd.read_sql("select * from stock", maria_home())
+def update_chart(fromdate: date, black_codes: list[str]):
+    stocks = pd.read_sql("select * from stock", db)
     codes = stocks["code"]
-    num = 1
+    num = 0
+    fromdatestr = fromdate.strftime("%Y-%m-%d")
+    excludes = pd.read_sql(f"select distinct code from chart where date > '{fromdatestr}'", db)["code"].to_list()
     for code in codes:
-        print(f"[{num}/{len(codes)}]", code)
-        _update_chart_by_code(code, fromdate, date.today() - timedelta(days=1))
         num += 1
+        print(f"[{num}/{len(codes)}]", code)
+
+        if code in excludes:
+            print("Skip")
+            continue
+
+        if code in black_codes:
+            print("Skip")
+            continue
+
+        # fixme: 해당 종목에 대한 레코드가 전혀 존재하지 않으면 새로 추가된 종목일 수 있으니, 해당 종목에 한하여 전체 기간 데이터 수집
+        # _update_chart_by_code(code, fromdate, date.today() - timedelta(days=1))
+        _update_chart_by_code(code, fromdate, date.today() + timedelta(days=1))
 
 
 def _create_month_chart_table(table_name: str):

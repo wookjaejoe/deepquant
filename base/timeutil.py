@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import abc
-from dataclasses import dataclass
-from typing import *
-from datetime import date
-from abc import ABCMeta
 import calendar
+import math
+from abc import ABCMeta
+from dataclasses import dataclass
+from datetime import date
+from typing import *
+
+
+def month_to_quarter(month: int):
+    return math.ceil(month / 3)
 
 
 class Valuable(metaclass=ABCMeta):
