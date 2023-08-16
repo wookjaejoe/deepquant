@@ -2,9 +2,12 @@ jsons
 retry
 pandas
 matplotlib
+scipy
+
 pymongo
 pymysql
 sqlalchemy
+
 requests
 websockets
 fastapi

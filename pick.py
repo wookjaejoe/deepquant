@@ -1,7 +1,8 @@
 import numpy as np
 
-from core.repository import load_financial
+from core.repository import FinanceLoader
 from core.repository.krx import get_ohlcv_latest
+from base.timeutil import YearQuarter
 from core.strategy import recipe
 
 colname_alias = {
@@ -15,8 +16,9 @@ colname_alias = {
     "영업활동으로인한현금흐름": "CF"
 }
 
+fin_loader = FinanceLoader()
 table = get_ohlcv_latest().set_index("code")
-table = table.join(load_financial(2023, 6))
+table = table.join(fin_loader.load(YearQuarter(2023, 2)))
 table.update(table[table["확정실적"].notna()]["확정실적"].apply(lambda x: str(x)))
 table.rename(columns=colname_alias, inplace=True)
 
