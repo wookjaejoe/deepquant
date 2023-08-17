@@ -22,7 +22,6 @@ def search():
     dart.set_api_key(OpenDartApiKey.next())
     page_no = 1
     while True:
-
         search_result = dart.search(
             bgn_de="20230701",
             end_de=date.today().strftime("%Y%m%d"),
@@ -83,6 +82,9 @@ def main():
     count = 1
     for r in search():
         _logger.info(f"[{count}] {r.corp_name}")
+        if r.stock_code != "126560":
+            continue
+
         if not r.stock_code:
             count += 1
             continue
