@@ -70,7 +70,7 @@ def load_corps():
 @retry(tries=3, delay=60, logger=_logger)
 def collect_report(
     corp_code: str,
-    bsns_year: str | int,
+    bsns_year: int,
     reprt_code: str,
     fs_div: str
 ):

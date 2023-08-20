@@ -1,0 +1,19 @@
+,concept_id,label_ko
+0,ifrs-full_Revenue,수익(매출액)
+1,ifrs-full_CostOfSales,매출원가
+2,ifrs-full_GrossProfit,매출총이익
+3,dart_TotalSellingGeneralAdministrativeExpenses,판매비와관리비
+4,dart_OperatingIncomeLoss,영업이익
+5,dart_OtherGains,기타수익
+6,dart_OtherLosses,기타비용
+7,entity00126380_udf_IS_2017102191515184_IncomeStatementAbstract,지분법이익
+8,ifrs-full_FinanceIncome,금융수익
+9,entity00126380_udf_IS_2017102191643789_IncomeStatementAbstract,금융비용
+10,ifrs-full_ProfitLossBeforeTax,법인세비용차감전순이익(손실)
+11,ifrs-full_IncomeTaxExpenseContinuingOperations,법인세비용
+12,ifrs-full_ProfitLossFromContinuingOperations,계속영업이익(손실)
+13,ifrs-full_ProfitLoss,당기순이익(손실)
+14,ifrs-full_ProfitLossAttributableToOwnersOfParent,지배기업의 소유주에게 귀속되는 당기순이익(손실)
+15,ifrs-full_ProfitLossAttributableToNoncontrollingInterests,비지배지분에 귀속되는 당기순이익(손실)
+16,ifrs-full_BasicEarningsLossPerShare,기본주당이익(손실)
+17,ifrs-full_DilutedEarningsLossPerShare,희석주당이익(손실)
