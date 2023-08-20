@@ -61,7 +61,13 @@ def get_ohlcv_by_date(date_: date):
 
 
 def get_ohlcv_latest():
-    for i in range(10):
-        df = get_ohlcv_by_date(date.today() - timedelta(days=i))
+    for i in range(14):
+        target_date = date.today() - timedelta(days=i)
+
+        if target_date.weekday() in [5, 6]:
+            # 토, 일 제외
+            continue
+
+        df = get_ohlcv_by_date(target_date)
         if len(df[df["vol"] != 0]) / len(df) > 0.95:
             return df
