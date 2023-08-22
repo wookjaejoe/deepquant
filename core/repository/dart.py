@@ -11,10 +11,8 @@ import pandas as pd
 import xmltodict
 from requests import get
 
-from config import config
-from repository import maria
-
-crtfc_key = config["dart"]["crtfc_key"]
+from core.repository import maria
+from core.repository.dartx import OpenDartApiKey
 
 
 @dataclass
@@ -43,7 +41,7 @@ def resource_path(subpath: str):
 
 
 def fetch_corps() -> Iterator[DartCorp]:
-    response = get("https://opendart.fss.or.kr/api/corpCode.xml", params={"crtfc_key": crtfc_key})
+    response = get("https://opendart.fss.or.kr/api/corpCode.xml", params={"crtfc_key": OpenDartApiKey.next()})
     assert response.status_code == 200
     assert response.content
 
@@ -111,6 +109,11 @@ def fetch_all(year: int, report_code: ReportCode):
         print(corp.code, corp.ver, content["status"], content["message"])
         with open(filepath, "w") as f:
             json.dump(content, f)
+
+def corps():
+    # 로컬에 활용가능한 캐시 있으면, 불러오기
+    # 없으면, 새로 다운로드
+    pass
 
 
 def load(filepath: str):

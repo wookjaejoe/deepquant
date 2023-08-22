@@ -55,3 +55,6 @@ def init(level: int = logging.INFO):
     root_logger = logging.getLogger()
     root_logger.handlers = [_create_stream_handler(level=level),
                             _create_file_handler(level=level)]
+
+
+logger = logging.getLogger()
