@@ -89,7 +89,7 @@ def read_report(
     return df
 
 
-@retry(tries=3, delay=1, jitter=5)
+@retry(tries=5, delay=1, jitter=10)
 def read_all_reports(corp_code: str) -> pd.DataFrame:
     # 2015-현재, 보고서종류, 연결구분에 대한 모든 조합
     args = pd.DataFrame(
