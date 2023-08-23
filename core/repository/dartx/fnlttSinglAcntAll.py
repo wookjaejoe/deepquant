@@ -1,0 +1,293 @@
+"""
+OpenDart fnlttSinglAcntAll API 활용한 재무정보 수집
+"""
+
+import logging
+import re
+from typing import *
+
+import numpy as np
+import pandas as pd
+import requests
+from pymongo import MongoClient
+from retry import retry
+
+from base import pdutil
+from base.timeutil import YearQuarter
+from config import config
+from core.repository import maria_home
+from core.repository.dartx.apikey import OpenDartApiKey
+from core.repository.dartx.corps import stocks as all_stocks
+from core.repository.dartx.corps import find_corp
+
+_logger = logging.getLogger(__name__)
+_mongo_client = MongoClient(config["mongo"]["url"])
+_mongo_clt = _mongo_client["finance"]["fnlttSinglAcntAll"]
+
+
+def _opendart_url(path: str):
+    return f"https://opendart.fss.or.kr/api/{path}"
+
+
+# @retry(tries=3, delay=1, jitter=10)
+def _search_reports(
+    bgn_de: str = "19980101",
+    stock_code: str = None,
+    corp_code: str = None
+):
+    assert stock_code is not None or corp_code is not None
+    if corp_code is None:
+        corp_code = find_corp(stock_code)["corp_code"]
+
+    page_no = 1
+    df = pd.DataFrame()
+    while True:
+        res = requests.get(
+            url=_opendart_url("list.json"),
+            params={
+                "crtfc_key": OpenDartApiKey.next(),
+                "corp_code": corp_code,
+                "bgn_de": bgn_de,
+                "page_count": 100,
+                "page_no": page_no,
+                "pblntf_ty": "A"
+            }
+        )
+        body = res.json()
+        if body["status"] == "013":
+            break
+
+        df = pd.concat([df, pd.DataFrame(body["list"])])
+
+        if body["page_no"] >= body["total_page"]:
+            break
+
+        page_no += 1
+
+    return df
+
+
+def _fnqtr(name: str) -> Optional[YearQuarter]:
+    """
+    리포트 이름으로부터 년도와 분기 정보를 획득한다. 현재는 12월 결산 기준보고서만 취급한다.
+    """
+    pattern = r'\d{4}.\d{2}'
+    match = re.search(pattern, name)
+    if match is None:
+        return
+
+    year_month = match.group()
+    y, m = year_month.split(".")
+    y, m = int(y), int(m)
+
+    result = None
+    if "분기보고서" in name:
+        if m == 3:
+            result = YearQuarter(y, 1)
+        elif m == 9:
+            result = YearQuarter(y, 3)
+    elif "반기보고서" in name and m == 6:
+        result = YearQuarter(y, 2)
+    elif "사업보고서" in name and m == 12:
+        result = YearQuarter(y, 4)
+
+    return result
+
+
+@retry(tries=3, delay=1, jitter=10)
+def _request_full_report(
+    corp_code: str,
+    bsns_year: int,
+    reprt_code: str,
+    fs_div: str
+) -> dict:
+    """
+    crtfc_key	API 인증키	STRING(40)	Y	발급받은 인증키(40자리)
+    corp_code	고유번호	STRING(8)	Y	공시대상회사의 고유번호(8자리)
+                                        ※ 개발가이드 > 공시정보 > 고유번호 참고
+    bsns_year	사업연도	STRING(4)	Y	사업연도(4자리) ※ 2015년 이후 부터 정보제공
+    reprt_code	보고서 코드	STRING(5)	Y	1분기보고서 : 11013
+                                            반기보고서 : 11012
+                                            3분기보고서 : 11014
+                                            사업보고서 : 11011
+    fs_div	개별/연결구분	STRING(3)	Y	OFS:재무제표, CFS:연결재무제표
+    """
+    assert bsns_year >= 2015
+    assert reprt_code in ["11013", "11012", "11014", "11011"]
+    res = requests.get(
+        url=_opendart_url("fnlttSinglAcntAll.json"),
+        params={
+            "crtfc_key": OpenDartApiKey.next(),
+            "corp_code": corp_code,
+            "bsns_year": bsns_year,
+            "reprt_code": reprt_code,
+            "fs_div": fs_div
+        }
+    )
+    return res.json()
+
+
+reprt_codes = {
+    1: "11013",
+    2: "11012",
+    3: "11014",
+    4: "11011"
+}
+
+
+def _fetch_reports(
+    corp_code: str,
+    bgn_de: str = "20150101"
+):
+    """
+    한 종목에 대해 보고서를 검색하고, fnlttSinglAcntAll 통해 분기별 재무제표를 조회하여 MongoDB에 저장한다.
+    """
+
+    # 보고서 조회
+    reports = _search_reports(bgn_de=bgn_de, corp_code=corp_code)
+    if reports.empty:
+        # 보고서 없으면 종료
+        return
+
+    reports["fnqtr"] = reports["report_nm"].apply(_fnqtr)
+    for yq in reports["fnqtr"]:
+        if yq is None:
+            continue
+
+        if yq.year < 2015:
+            # 2015년 이후 데이터만 취급
+            continue
+
+        for fs_div in ["CFS", "OFS"]:
+            args = {
+                "corp_code": corp_code,
+                "bsns_year": yq.year,
+                "reprt_code": reprt_codes[yq.quarter],
+                "fs_div": fs_div
+            }
+
+            if _mongo_clt.find_one({"args": args}) is not None:
+                continue  # fixme: 이미 있으면 어떻게 하지?
+
+            body = _request_full_report(**args)
+            doc = {
+                "args": args,
+                "body": body
+            }
+            _mongo_clt.insert_one(doc)
+
+
+def fetch_reports_for_all_corps():
+    """
+    모든 기업 재무제표 수집
+    """
+    stocks = all_stocks[~all_stocks["corp_name"].str.endswith("스팩")]
+    stocks = stocks[stocks["corp_code"].str.endswith("0")]
+
+    num = 1
+    for _, stock in stocks.iterrows():
+        name = stock["corp_name"]
+        print(f"[{num}/{len(stock)}] {name}")
+        _fetch_reports(stock["corp_code"])
+        num += 1
+
+
+accounts = {
+    "자산총계": [
+        "BS/ifrs-full_Assets",
+        "BS/ifrs_Assets"
+    ],
+    "자본총계": [
+        "BS/ifrs-full_Equity",
+        "BS/ifrs_Equity"
+    ],
+    "유동자산": [
+        "BS/ifrs-full_CurrentAssets",
+        "BS/ifrs_CurrentAssets"
+    ],
+    "매출액": [
+        "IS/ifrs-full_Revenue",
+        "IS/ifrs_Revenue",
+        "CIS/ifrs-full_Revenue",
+        "CIS/ifrs_Revenue",
+    ],
+    "매출총이익": [
+        "IS/ifrs-full_GrossProfit",
+        "IS/ifrs_GrossProfit",
+        "CIS/ifrs-full_GrossProfit",
+        "CIS/ifrs_GrossProfit",
+    ],
+    "영업이익": [
+        "IS/dart_OperatingIncomeLoss",
+        "CIS/dart_OperatingIncomeLoss",
+    ],
+    "당기순이익": [
+        "IS/ifrs-full_ProfitLoss",
+        "IS/ifrs_ProfitLoss",
+        "CIS/ifrs-full_ProfitLoss",
+        "CIS/ifrs_ProfitLoss",
+    ],
+    "영업활동현금흐름": [
+        "CF/ifrs-full_CashFlowsFromUsedInOperatingActivities",
+        "CF/ifrs_CashFlowsFromUsedInOperatingActivities"
+    ]
+}
+
+
+def _preprocess(doc: dict):
+    """
+    Opendart > fnlttSinglAcntAll API 요청과 응답정보를 담은 MongoDB fnlttSinglAcntAll 컬렉션의 다큐먼트 하나에 대한 전처리를 수행한다.
+    응답 원본에서 sj_div와 account_id를 통해 주요 계정 항목을 찾는다. 응답 원본에는 account_id 중복 또는 누락이 있을 수 있다.
+    """
+    args = doc["args"]
+    body = doc["body"]
+    raw = pd.DataFrame(body["list"])
+    result = pd.Series(args)
+    for acc_name, acc_ids in accounts.items():
+        # df에서 account_id가 acc_id에 포함되는 항목 찾기
+        raw["sj_div/account_id"] = raw["sj_div"] + "/" + raw["account_id"]
+        rows = raw[raw["sj_div/account_id"].isin(acc_ids)]
+        values = rows["thstrm_amount"].replace("", np.nan).dropna().astype(int)
+        if len(values) == 0:
+            # 없을때, 버림
+            continue
+        elif len(values) == 1:
+            # 하나 있을때, 취함
+            value = values.iloc[0]
+        else:
+            # 첫번째 값을 취함. 본 코드에서 데이터 오염 발생 우려 있음.
+            value = values.iloc[0]
+
+        result[acc_name] = value
+
+    return result
+
+
+def preprocess_all():
+    """
+    Opendart > fnlttSinglAcntAll API 요청과 응답정보를 담은 MongoDB fnlttSinglAcntAll 컬렉션 전체에 대하여 전처리를 수행하고,
+    MariaDB fnlttSinglAcntAll 테이블에 저장한다.
+    """
+
+    maria_db = maria_home()
+
+    # 이미 존재하는
+    exist_rows = pd.read_sql_query(
+        "select corp_code, bsns_year, reprt_code, fs_div from fnlttSinglAcntAll",
+        maria_db
+    )
+    num = 0
+    for doc in _mongo_clt.find({"body.status": "000"}):
+        num += 1
+        print(num)
+
+        if not pdutil.find(exist_rows, **doc["args"]).empty:
+            continue
+
+        row = _preprocess(doc).to_frame().T
+        row.to_sql(
+            "fnlttSinglAcntAll",
+            maria_db,
+            if_exists="append",
+            index=False
+        )

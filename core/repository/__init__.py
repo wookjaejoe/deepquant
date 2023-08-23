@@ -3,6 +3,7 @@ import pandas as pd
 from base.timeutil import YearQuarter
 from core.repository.maria.conn import maria_home
 from core.repository.mongo import ds
+from core.repository.dartx.corps import stocks
 
 FinanceAlias = {
     "자산총계": "A",  # Asset
@@ -20,9 +21,40 @@ class Growth:
         return (aft - pre) / abs(pre)
 
 
+def prioritize_cfs(data: pd.DataFrame):
+    # fixme: 분기별 CFS 우선. 재귀로 해결해야할듯 data.groupby(["bsns_year", "reprt_code"]).apply(prioritize_cfs)
+    cfs = data[data["fs_div"] == "CFS"]
+    if cfs.empty:
+        return data[data["fs_div"] == "OFS"]
+    else:
+        return cfs
+
+
 class FinanceLoader:
     def __init__(self):
-        self._table = pd.read_sql(f"select * from finance", maria_home()).set_index("code")
+        """
+        1분기보고서 : 11013
+        반기보고서 : 11012
+        3분기보고서 : 11014
+        사업보고서 : 11011
+        """
+        # self._table = pd.read_sql(f"select * from finance", maria_home()).set_index("code")
+        self._table = pd.read_sql(f"select * from fnlttSinglAcntAll", maria_home()).set_index("corp_code")
+        self._table["quarter"] = self._table["reprt_code"].replace({
+            "11013": 1,
+            "11012": 2,
+            "11014": 3,
+            "11011": 4
+        })
+        self._table = self._table.merge(stocks, left_on="corp_code", right_on="corp_code")
+        self._table = self._table.rename(columns={"stock_code": "code"})
+        self._table = self._table.groupby(["code"]).apply(prioritize_cfs)
+        self._table = self._table.reset_index(drop=True)
+        self._table = self._table.rename(columns={
+            "bsns_year": "year"
+        })
+        self._table = self._table.set_index("code")
+        # fixme: __init__ 안의 코드는 데이터 수집이 끝난 이후 변경될 예정
 
     def _load_from_table(self, yq: YearQuarter):
         return self._table[(self._table["year"] == yq.year) & (self._table["quarter"] == yq.quarter)]
@@ -48,13 +80,11 @@ class FinanceLoader:
             result[f"{FinanceAlias[col]}/Y"] = df.sum(axis=1)
 
         for col in is_cols:
-            col_alias = FinanceAlias[col]
-            result[f"{col_alias}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
+            result[f"{FinanceAlias[col]}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
 
         for col in is_cols:
-            col_alias = FinanceAlias[col]
-            result[f"{col_alias}_QoQA"] = (Growth.rate(fins[0][col], fins[4][col]) -
-                                           Growth.rate(fins[1][col], fins[5][col]))
+            result[f"{FinanceAlias[col]}_QoQA"] = (Growth.rate(fins[0][col], fins[4][col]) -
+                                                   Growth.rate(fins[1][col], fins[5][col]))
 
         bs_cols = ["자산총계", "자본총계"]
         for is_col in is_cols:
