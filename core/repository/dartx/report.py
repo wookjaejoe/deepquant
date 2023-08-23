@@ -1,13 +1,21 @@
-import requests
-
-from core.repository.dartx.apikey import OpenDartApiKey
-from core.repository.dartx.corps import corps, find_corp
-from core.repository.dartx.error import NoData
-import pandas as pd
+import re
 from datetime import date
 from itertools import product
-from base.log import logger
+
+import pandas as pd
+import requests
 from retry import retry
+
+from base.log import logger
+from base.timeutil import YearQuarter
+from core.repository.dartx.apikey import OpenDartApiKey
+from core.repository.dartx.corps import find_corp
+from core.repository.dartx.error import NoData
+from pymongo import MongoClient
+from config import config
+
+_client = MongoClient(config["mongo"]["url"])
+_collection = _client["finance"]["opendartFullReport"]
 
 
 def opendart_url(path: str):
@@ -51,12 +59,33 @@ def search_reports(
     return df
 
 
-def read_report(
+def fnqtr(name: str) -> YearQuarter:
+    pattern = r'\d{4}.\d{2}'
+    match = re.search(pattern, name)
+    year_month = match.group()
+    y, m = year_month.split(".")
+    y, m = int(y), int(m)
+
+    result = None
+    if "분기보고서" in name:
+        if m == 3:
+            result = YearQuarter(y, 1)
+        elif m == 9:
+            result = YearQuarter(y, 3)
+    elif "반기보고서" in name:
+        result = YearQuarter(y, 2)
+    elif "사업보고서" in name:
+        result = YearQuarter(y, 4)
+
+    return result
+
+
+def request_full_report(
     corp_code: str,
     bsns_year: int,
     reprt_code: str,
     fs_div: str
-) -> pd.DataFrame:
+) -> dict:
     """
     crtfc_key	API 인증키	STRING(40)	Y	발급받은 인증키(40자리)
     corp_code	고유번호	STRING(8)	Y	공시대상회사의 고유번호(8자리)
@@ -80,13 +109,45 @@ def read_report(
             "fs_div": fs_div
         }
     )
-    json = res.json()
-    if json["status"] == "013":
-        raise NoData()
+    return res.json()
 
-    df = pd.DataFrame(json["list"])
-    df["bsns_year"] = df["bsns_year"].astype(int)
-    return df
+
+reprt_codes = {
+    1: "11013",
+    2: "11012",
+    3: "11014",
+    4: "11011"
+}
+
+
+def fetch_reports(corp_code):
+    reports = search_reports(
+        bgn_de="20150101",
+        corp_code=corp_code
+    )
+    reports["fnqtr"] = reports["report_nm"].apply(fnqtr)
+    for yq in reports["fnqtr"]:
+        if yq.year < 2015:
+            # 2015년 이후 데이터만 취급
+            continue
+
+        for fs_div in ["CFS", "OFS"]:
+            args = {
+                "corp_code": corp_code,
+                "bsns_year": yq.year,
+                "reprt_code": reprt_codes[yq.quarter],
+                "fs_div": fs_div
+            }
+
+            if _collection.find_one({"args": args}) is not None:
+                continue  # fixme: 이미 있으면 어떻게 하지?
+
+            body = request_full_report(**args)
+            doc = {
+                "args": args,
+                "body": body
+            }
+            _collection.insert_one(doc)
 
 
 @retry(tries=5, delay=1, jitter=10)
@@ -104,7 +165,7 @@ def read_all_reports(corp_code: str) -> pd.DataFrame:
     result = pd.DataFrame()
     for index, arg in args.iterrows():
         try:
-            df = read_report(
+            df = request_full_report(
                 corp_code=corp_code,
                 bsns_year=arg["bsns_year"],
                 reprt_code=arg["reprt_code"],
@@ -117,3 +178,17 @@ def read_all_reports(corp_code: str) -> pd.DataFrame:
             pass
 
     return result
+
+
+def xbrl():
+    # fixme: 이거 시도해보자.
+    res = requests.get(
+        "https://opendart.fss.or.kr/api/fnlttXbrl.xml",
+        params={
+            "crtfc_key": OpenDartApiKey.next(),
+            "rcept_no": "",
+            "reprt_code": "",
+        }
+    )
+    json = res.json()
+    print()
