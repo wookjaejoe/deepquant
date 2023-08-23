@@ -47,7 +47,7 @@ def search_reports(
         )
         body = res.json()
         if body["status"] == "013":
-            raise NoData()
+            break
 
         df = pd.concat([df, pd.DataFrame(body["list"])])
 
@@ -80,6 +80,7 @@ def fnqtr(name: str) -> YearQuarter:
     return result
 
 
+@retry(tries=3, delay=1, jitter=10)
 def request_full_report(
     corp_code: str,
     bsns_year: int,
@@ -120,11 +121,18 @@ reprt_codes = {
 }
 
 
-def fetch_reports(corp_code):
+def fetch_reports(
+    corp_code: str,
+    bgn_de: str = "20150101"
+):
     reports = search_reports(
-        bgn_de="20150101",
+        bgn_de=bgn_de,
         corp_code=corp_code
     )
+
+    if len(reports) == 0:
+        return
+
     reports["fnqtr"] = reports["report_nm"].apply(fnqtr)
     for yq in reports["fnqtr"]:
         if yq.year < 2015:
@@ -148,36 +156,6 @@ def fetch_reports(corp_code):
                 "body": body
             }
             _collection.insert_one(doc)
-
-
-@retry(tries=5, delay=1, jitter=10)
-def read_all_reports(corp_code: str) -> pd.DataFrame:
-    # 2015-현재, 보고서종류, 연결구분에 대한 모든 조합
-    args = pd.DataFrame(
-        product(
-            list(range(2015, date.today().year + 1)),
-            ["11013", "11012", "11014", "11011"],
-            ["OFS", "CFS"]
-        ),
-        columns=["bsns_year", "reprt_code", "fs_div"]
-    )
-
-    result = pd.DataFrame()
-    for index, arg in args.iterrows():
-        try:
-            df = request_full_report(
-                corp_code=corp_code,
-                bsns_year=arg["bsns_year"],
-                reprt_code=arg["reprt_code"],
-                fs_div=arg["fs_div"],
-            )
-            df["fs_div"] = arg["fs_div"]
-            result = pd.concat([result, df], ignore_index=True)
-        except NoData:
-            logger.info(f"No data for {arg.values}")
-            pass
-
-    return result
 
 
 def xbrl():

@@ -16,6 +16,10 @@ class OpenDartApiKey:
         "25f0bcd758b2fdd78e6c0c03592376c849080334",
         "5da06f9b1be75385e04b7699ec6b5236b7c3355c",
         "22ea11027b0d0c6e8d978b58d2a0cd9e3be45ae2",
+        "ce0d3e890ec89803361898e69209afdea7a49958",
+        "33fea3a759dfccaf4f89d3d9ce77b33e934f4802",
+        "82ce253f14dc8fc47e89007aed868d6d1b919b4a",
+        "efada4c215f05441941633ae0ea871c2f5ae0f23"
     ]
     _removed = []
     _i = 0
@@ -24,10 +28,10 @@ class OpenDartApiKey:
 
     @classmethod
     def next(cls):
-        api_keys = [k for k in cls._api_keys if k not in cls._removed]
+        valid_keys = [k for k in cls._api_keys if k not in cls._removed]
         cls._i += 1
-        i = cls._i % len(api_keys)
-        return api_keys[i]
+        i = cls._i % len(valid_keys)
+        return valid_keys[i]
 
     @classmethod
     def remove(cls, api_key):
@@ -41,21 +45,12 @@ class OpenDartApiKey:
 
     @classmethod
     def validate(cls, api_key):
-        params = {"crtfc_key": api_key, "corp_code": "00126380"}
-        params_str = "&".join([f"{k}={v}" for k, v in params.items()])
-        url = f"https://opendart.fss.or.kr/api/company.json?{params_str}"
+        res = requests.get(
+            "https://opendart.fss.or.kr/api/company.json",
+            params={"crtfc_key": api_key, "corp_code": "00126380"}
+        )
 
-        res = None
-        for i in range(5):
-            try:
-                res = requests.get(url)
-            except:
-                time.sleep(30)
-                continue
+        return not res.json()["status"] in ["011", "020"]
 
-        body = res.json()
-        print(api_key, body["status"])
-        if body["status"] == "000":
-            return True
 
-        return False
+OpenDartApiKey.remove_invalid_keys()
