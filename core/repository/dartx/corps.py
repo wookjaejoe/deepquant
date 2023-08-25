@@ -3,8 +3,11 @@ import zipfile
 
 import pandas as pd
 import requests
+import os
+from datetime import date
 
 from core.repository.dartx.apikey import OpenDartApiKey
+import tempfile
 
 
 def _fetch() -> pd.DataFrame:
@@ -32,11 +35,25 @@ def _fetch() -> pd.DataFrame:
     )
 
 
-corps = _fetch()
+today = date.today().strftime("%Y%m%d")
+corp_file = os.path.join(tempfile.gettempdir(), "deepquant", f"corp_{today}.pkl")
+os.makedirs(os.path.dirname(corp_file), exist_ok=True)
+
+
+def _load():
+    if os.path.isfile(corp_file):
+        return pd.read_pickle(corp_file)
+    else:
+        df = _fetch()
+        df.to_pickle(corp_file)
+        return df
+
+
+corps = _load()
 stocks = corps[corps["stock_code"].notna()]
 
 
-def find_corp(stock_code: str):
-    corp_list = corps[corps["stock_code"] == stock_code]
+def find_stock(stock_code: str):
+    corp_list = stocks[stocks["stock_code"] == stock_code]
     if len(corp_list) > 0:
-        return corps[corps["stock_code"] == stock_code].iloc[0]
+        return stocks[stocks["stock_code"] == stock_code].iloc[0]

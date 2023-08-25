@@ -57,6 +57,7 @@ class FinanceLoader:
         # fixme: __init__ 안의 코드는 데이터 수집이 끝난 이후 변경될 예정
 
     def _load_from_table(self, yq: YearQuarter):
+        # todo: CFS 또는 OFS 둘중 하나 결정
         return self._table[(self._table["year"] == yq.year) & (self._table["quarter"] == yq.quarter)]
 
     def load(self, yq: YearQuarter):

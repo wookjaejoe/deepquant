@@ -18,7 +18,8 @@ from config import config
 from core.repository import maria_home
 from core.repository.dartx.apikey import OpenDartApiKey
 from core.repository.dartx.corps import stocks as all_stocks
-from core.repository.dartx.corps import find_corp
+from core.repository.dartx.corps import find_stock
+from core.repository.dartx.search import search_reports
 
 _logger = logging.getLogger(__name__)
 _mongo_client = MongoClient(config["mongo"]["url"])
@@ -27,44 +28,6 @@ _mongo_clt = _mongo_client["finance"]["fnlttSinglAcntAll"]
 
 def _opendart_url(path: str):
     return f"https://opendart.fss.or.kr/api/{path}"
-
-
-# @retry(tries=3, delay=1, jitter=10)
-def _search_reports(
-    bgn_de: str = "19980101",
-    stock_code: str = None,
-    corp_code: str = None
-):
-    assert stock_code is not None or corp_code is not None
-    if corp_code is None:
-        corp_code = find_corp(stock_code)["corp_code"]
-
-    page_no = 1
-    df = pd.DataFrame()
-    while True:
-        res = requests.get(
-            url=_opendart_url("list.json"),
-            params={
-                "crtfc_key": OpenDartApiKey.next(),
-                "corp_code": corp_code,
-                "bgn_de": bgn_de,
-                "page_count": 100,
-                "page_no": page_no,
-                "pblntf_ty": "A"
-            }
-        )
-        body = res.json()
-        if body["status"] == "013":
-            break
-
-        df = pd.concat([df, pd.DataFrame(body["list"])])
-
-        if body["page_no"] >= body["total_page"]:
-            break
-
-        page_no += 1
-
-    return df
 
 
 def _fnqtr(name: str) -> Optional[YearQuarter]:
@@ -144,7 +107,7 @@ def _fetch_reports(
     """
 
     # 보고서 조회
-    reports = _search_reports(bgn_de=bgn_de, corp_code=corp_code)
+    reports = search_reports(bgn_de=bgn_de, corp_code=corp_code)
     if reports.empty:
         # 보고서 없으면 종료
         return
@@ -170,6 +133,7 @@ def _fetch_reports(
                 continue  # fixme: 이미 있으면 어떻게 하지?
 
             body = _request_full_report(**args)
+            # fixme: 리포트 정보도 함께 저장
             doc = {
                 "args": args,
                 "body": body
@@ -277,6 +241,8 @@ def preprocess_all():
         maria_db
     )
     num = 0
+    buffer = pd.DataFrame()
+    buffer_size = 500
     for doc in _mongo_clt.find({"body.status": "000"}):
         num += 1
         print(num)
@@ -285,9 +251,12 @@ def preprocess_all():
             continue
 
         row = _preprocess(doc).to_frame().T
-        row.to_sql(
-            "fnlttSinglAcntAll",
-            maria_db,
-            if_exists="append",
-            index=False
-        )
+        buffer = pd.concat([buffer, row])
+        if len(buffer) >= buffer_size:
+            # 데이터 업로드
+            buffer.to_sql("fnlttSinglAcntAll", maria_db, if_exists="append", index=False)
+            buffer = pd.DataFrame()
+
+    # 남은 데이터 업로드
+    if not buffer.empty:
+        buffer.to_sql("fnlttSinglAcntAll", maria_db, if_exists="append", index=False)
