@@ -3,7 +3,6 @@ import pandas as pd
 from base.timeutil import YearQuarter
 from core.repository.maria.conn import maria_home
 from core.repository.mongo import ds
-from core.repository.dartx.corps import stocks
 
 FinanceAlias = {
     "자산총계": "A",  # Asset
@@ -46,7 +45,9 @@ class FinanceLoader:
             "11014": 3,
             "11011": 4
         })
-        self._table = self._table.merge(stocks, left_on="corp_code", right_on="corp_code")
+
+        from core.repository.dartx.corps import stocks
+        self._table = self._table.merge(stocks, on="corp_code", how="left")
         self._table = self._table.rename(columns={"stock_code": "code"})
         self._table = self._table.groupby(["code"]).apply(prioritize_cfs)
         self._table = self._table.reset_index(drop=True)
