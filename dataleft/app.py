@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from base import log
+
+log.init()
 
 app = FastAPI()
 
