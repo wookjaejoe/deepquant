@@ -7,7 +7,7 @@ from core.strategy import recipe
 
 fin_loader = FinanceLoader()
 table = get_ohlcv_latest().set_index("code")
-table = table.join(fin_loader.load(YearQuarter(2023, 2)))
+table = table.join(fin_loader.load_by_qtr(YearQuarter(2023, 2)))
 table = table.rename(columns={
     "cap": "P",
 })

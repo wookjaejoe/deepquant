@@ -7,7 +7,7 @@ from core.repository.maria.conn import maria_home
 db = maria_home()
 
 
-def _fetch_and_finance(code: str, items: list, year: int, month: int, sep: bool):
+def _fetch_and_upload(code: str, items: list, year: int, month: int, sep: bool):
     df = fetch_finance(
         code=code,
         item=items,
@@ -28,8 +28,8 @@ def fetch_and_upload_both(code: str, year: int, month: int):
     records = pd.read_sql(query, db)
     items = [acc for acc in account.majors if acc not in records[records["consolgb"] == "C"]["item"].values]
     if len(items) > 0:
-        _fetch_and_finance(code=code, items=items, year=year, month=month, sep=False)
+        _fetch_and_upload(code=code, items=items, year=year, month=month, sep=False)
 
     items = [acc for acc in account.majors if acc not in records[records["consolgb"] == "I"]["item"].values]
     if len(items) > 0:
-        _fetch_and_finance(code=code, items=items, year=year, month=month, sep=True)
+        _fetch_and_upload(code=code, items=items, year=year, month=month, sep=True)

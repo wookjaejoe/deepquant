@@ -1,4 +1,4 @@
-from core.repository.dartx.corps import find_stock
+from core.repository.maria.stocks import find_stock
 import requests
 import pandas as pd
 from retry import retry
@@ -10,7 +10,7 @@ def search_reports(
     bgn_de: str = "19980101",
     stock_code: str = None,
     corp_code: str = None
-):
+) -> pd.DataFrame:
     """
     공시 검색
     """

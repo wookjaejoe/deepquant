@@ -17,9 +17,9 @@ from base.timeutil import YearQuarter
 from config import config
 from core.repository import maria_home
 from core.repository.dartx.apikey import OpenDartApiKey
-from core.repository.dartx.corps import stocks as all_stocks
-from core.repository.dartx.corps import find_stock
+from core.repository import get_stocks
 from core.repository.dartx.search import search_reports
+from base.timeutil import YearMonth
 
 _logger = logging.getLogger(__name__)
 _mongo_client = MongoClient(config["mongo"]["url"])
@@ -30,7 +30,32 @@ def _opendart_url(path: str):
     return f"https://opendart.fss.or.kr/api/{path}"
 
 
-def _fnqtr(name: str) -> Optional[YearQuarter]:
+def _fnqtr(name: str, fnm: int) -> Optional[YearQuarter]:
+    """
+    리포트 이름으로부터 년도와 분기 정보를 획득한다. 현재는 12월 결산 기준보고서만 취급한다.
+    """
+    ym = _fnym(name)
+    if ym is None:
+        return
+
+    y, m = ym.year, ym.month
+    result = None
+    if "분기보고서" in name:
+        if m == (fnm + 3) % 12:
+            # 1분기: 결산월+3개월
+            result = YearQuarter(y, 1)
+        elif m == (fnm + 9) % 12:
+            # 3분기: 결산월+9개월
+            result = YearQuarter(y, 3)
+    elif "반기보고서" in name and m == (fnm + 6) % 12:
+        result = YearQuarter(y, 2)
+    elif "사업보고서" in name and m == fnm:
+        result = YearQuarter(y, 4)
+
+    return result
+
+
+def _fnym(name: str) -> Optional[YearMonth]:
     """
     리포트 이름으로부터 년도와 분기 정보를 획득한다. 현재는 12월 결산 기준보고서만 취급한다.
     """
@@ -41,20 +66,7 @@ def _fnqtr(name: str) -> Optional[YearQuarter]:
 
     year_month = match.group()
     y, m = year_month.split(".")
-    y, m = int(y), int(m)
-
-    result = None
-    if "분기보고서" in name:
-        if m == 3:
-            result = YearQuarter(y, 1)
-        elif m == 9:
-            result = YearQuarter(y, 3)
-    elif "반기보고서" in name and m == 6:
-        result = YearQuarter(y, 2)
-    elif "사업보고서" in name and m == 12:
-        result = YearQuarter(y, 4)
-
-    return result
+    return YearMonth(int(y), int(m))
 
 
 @retry(tries=3, delay=1, jitter=10)
@@ -98,8 +110,21 @@ reprt_codes = {
 }
 
 
+def guess_fnm(reports: pd.DataFrame) -> Optional[int]:
+    """
+    리포트 이름을 통해 결산월을 추정한다.
+    """
+    try:
+        fnym = reports["report_nm"].apply(_fnym)
+        reports = reports.reindex(fnym.sort_values(ascending=False).index)
+        bn_report = reports[reports["report_nm"].str.contains("사업보고서")].iloc[0]
+        return _fnym(bn_report["report_nm"]).month
+    except:
+        return
+
+
 def _fetch_reports(
-    corp_code: str,
+    stock: pd.Series,
     bgn_de: str = "20150101"
 ):
     """
@@ -107,52 +132,60 @@ def _fetch_reports(
     """
 
     # 보고서 조회
-    reports = search_reports(bgn_de=bgn_de, corp_code=corp_code)
+    reports = search_reports(bgn_de=bgn_de, corp_code=stock["corp_code"])
     if reports.empty:
         # 보고서 없으면 종료
         return
 
-    reports["fnqtr"] = reports["report_nm"].apply(_fnqtr)
-    for yq in reports["fnqtr"]:
-        if yq is None:
+    fnm = guess_fnm(reports)
+    if fnm is None:
+        fnm = stock["acc_mt"]
+
+    for _, report in reports.iterrows():
+        fnym = _fnym(report["report_nm"])
+        fnqtr = _fnqtr(report["report_nm"], fnm)
+
+        if fnym is None or fnqtr is None:
             continue
 
-        if yq.year < 2015:
+        if fnym.year < 2015:
             # 2015년 이후 데이터만 취급
             continue
 
         for fs_div in ["CFS", "OFS"]:
             args = {
-                "corp_code": corp_code,
-                "bsns_year": yq.year,
-                "reprt_code": reprt_codes[yq.quarter],
+                "corp_code": report["corp_code"],
+                "bsns_year": fnym.year,
+                "reprt_code": reprt_codes[fnqtr.quarter],
                 "fs_div": fs_div
             }
 
             if _mongo_clt.find_one({"args": args}) is not None:
-                continue  # fixme: 이미 있으면 어떻게 하지?
+                continue
 
             body = _request_full_report(**args)
-            # fixme: 리포트 정보도 함께 저장
             doc = {
+                "report": report.to_dict(),
                 "args": args,
                 "body": body
             }
             _mongo_clt.insert_one(doc)
 
 
-def fetch_reports_for_all_corps():
+def fetch_reports():
     """
     모든 기업 재무제표 수집
     """
-    stocks = all_stocks[~all_stocks["corp_name"].str.endswith("스팩")]
-    stocks = stocks[stocks["corp_code"].str.endswith("0")]
+    stocks = get_stocks()
+    stocks = stocks[stocks["corp_cls"] != 'E']
+    stocks = stocks[~stocks["stock_name"].str.endswith("스팩")]
+    stocks = stocks[stocks["stock_code"].str.endswith("0")]
 
     num = 1
     for _, stock in stocks.iterrows():
-        name = stock["corp_name"]
-        print(f"[{num}/{len(stock)}] {name}")
-        _fetch_reports(stock["corp_code"])
+        name = stock["stock_code"]
+        _logger.info(f"[{num}/{len(stocks)}] {name}")
+        _fetch_reports(stock)
         num += 1
 
 

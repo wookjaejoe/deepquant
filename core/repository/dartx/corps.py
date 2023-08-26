@@ -1,21 +1,18 @@
 import io
+import logging
 import zipfile
 
 import pandas as pd
 import requests
-import os
-from datetime import date
 
-from core.repository.dartx.apikey import OpenDartApiKey
-import tempfile
 from core.repository import maria_home
-
-import logging
+from core.repository.dartx.apikey import OpenDartApiKey
+from retry import retry
 
 _logger = logging.getLogger()
 
 
-def _fetch_corps() -> pd.DataFrame:
+def fetch_corps() -> pd.DataFrame:
     """
     opendart api 통해 종목 정보 가져오기
     """
@@ -40,7 +37,23 @@ def _fetch_corps() -> pd.DataFrame:
     )
 
 
-def company(corp_code: str):
+def update_stocks():
+    corps = fetch_corps()
+    corps = corps[corps["stock_code"].notna()]
+
+    companies = []
+    num = 1
+    for corp_code in corps["corp_code"]:
+        _logger.info(f"[{num}/{len(corps)}] Fetching company info...")
+        companies.append(_company(corp_code))
+        num += 1
+
+    companies = pd.DataFrame(companies)
+    companies.to_sql("stocks", maria_home(), index=False)
+
+
+@retry(tries=3, delay=1, jitter=5)
+def _company(corp_code: str):
     """
     status	에러 및 정보 코드	(※메시지 설명 참조)
     message	에러 및 정보 메시지	(※메시지 설명 참조)
@@ -73,37 +86,3 @@ def company(corp_code: str):
     body = res.json()
     assert body["status"] == "000", body["message"]
     return body
-
-
-today = date.today().strftime("%Y%m%d")
-corp_file = os.path.join(tempfile.gettempdir(), "deepquant", f"corp_{today}.pkl")
-os.makedirs(os.path.dirname(corp_file), exist_ok=True)
-stocks = pd.read_sql("stocks", maria_home())
-
-
-def find_stock(stock_code: str):
-    corp_list = stocks[stocks["stock_code"] == stock_code]
-    if len(corp_list) > 0:
-        return stocks[stocks["stock_code"] == stock_code].iloc[0]
-
-
-def update_stocks():
-    """
-    MariaDB > stocks 테이블 데이터 업데이트
-    """
-    _logger.info("Fetching corp list...")
-    corps = _fetch_corps()
-    corps = corps[corps["stock_code"].notna()]
-
-    companies = []
-    num = 1
-    for corp_code in corps["corp_code"]:
-        _logger.info(f"[{num}/{len(corps)}] Fetching company info...")
-        companies.append(company(corp_code))
-        num += 1
-
-    corps = corps.merge(pd.DataFrame(companies), on="corp_code", how="left")
-    table_name = "stocks_" + date.today().strftime("%Y%m%d")
-
-    _logger.info(f"Updating {table_name}")
-    corps.to_sql(table_name, maria_home(), index=False)

@@ -3,6 +3,7 @@ import pandas as pd
 from base.timeutil import YearQuarter
 from core.repository.maria.conn import maria_home
 from core.repository.mongo import ds
+from core.repository.maria.stocks import get_stocks
 
 FinanceAlias = {
     "자산총계": "A",  # Asset
@@ -20,13 +21,17 @@ class Growth:
         return (aft - pre) / abs(pre)
 
 
-def prioritize_cfs(data: pd.DataFrame):
+def select_fs_div(data: pd.DataFrame):
     # fixme: 분기별 CFS 우선. 재귀로 해결해야할듯 data.groupby(["bsns_year", "reprt_code"]).apply(prioritize_cfs)
-    cfs = data[data["fs_div"] == "CFS"]
-    if cfs.empty:
-        return data[data["fs_div"] == "OFS"]
+    assert data["fs_div"].isin(["연결", "별도"]).all()
+    if not data[data["fs_div"] == "연결"].empty:
+        return "연결"
     else:
-        return cfs
+        return "별도"
+
+
+def filter_by_fs_div(data: pd.DataFrame, fs_div: pd.Series):
+    return data[data["fs_div"] == fs_div]
 
 
 class FinanceLoader:
@@ -37,33 +42,20 @@ class FinanceLoader:
         3분기보고서 : 11014
         사업보고서 : 11011
         """
-        # self._table = pd.read_sql(f"select * from finance", maria_home()).set_index("code")
-        self._table = pd.read_sql(f"select * from fnlttSinglAcntAll", maria_home()).set_index("corp_code")
-        self._table["quarter"] = self._table["reprt_code"].replace({
-            "11013": 1,
-            "11012": 2,
-            "11014": 3,
-            "11011": 4
-        })
-
-        from core.repository.dartx.corps import stocks
-        self._table = self._table.merge(stocks, on="corp_code", how="left")
-        self._table = self._table.rename(columns={"stock_code": "code"})
-        self._table = self._table.groupby(["code"]).apply(prioritize_cfs)
-        self._table = self._table.reset_index(drop=True)
-        self._table = self._table.rename(columns={
-            "bsns_year": "year"
-        })
-        self._table = self._table.set_index("code")
+        self._table = pd.read_sql(f"select * from finance", maria_home()).set_index("code")
         # fixme: __init__ 안의 코드는 데이터 수집이 끝난 이후 변경될 예정
 
     def _load_from_table(self, yq: YearQuarter):
-        # todo: CFS 또는 OFS 둘중 하나 결정
-        return self._table[(self._table["year"] == yq.year) & (self._table["quarter"] == yq.quarter)]
+        result = self._table[(self._table["year"] == yq.year) & (self._table["qtr"] == yq.quarter)]
+        return result
 
-    def load(self, yq: YearQuarter):
+    def load_by_qtr(self, yq: YearQuarter):
         # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
         fins = [self._load_from_table(yq.minus(i)) for i in range(6)]
+        fs_div = pd.MultiIndex.from_frame(fins[0].groupby("code").apply(select_fs_div).to_frame("fs_div").reset_index())
+        fins = [fin.set_index("fs_div", append=True) for fin in fins]
+        fins = [fin[fin.index.isin(fs_div)].reset_index(level=1) for fin in fins]
+
         result = pd.DataFrame()
         result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
         result["순유동자산"] = fins[0]["유동자산"] - result["부채총계"]
@@ -98,3 +90,6 @@ class FinanceLoader:
         # todo 성장가속 전분기대비
         # todo 등수 말고 포지션으로?
         return result
+
+    def load_all(self):
+        print()
