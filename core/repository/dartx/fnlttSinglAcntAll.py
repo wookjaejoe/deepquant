@@ -139,7 +139,7 @@ def _fetch_reports(
 
     fnm = guess_fnm(reports)
     if fnm is None:
-        fnm = stock["acc_mt"]
+        fnm = int(stock["acc_mt"])
 
     for _, report in reports.iterrows():
         fnym = _fnym(report["report_nm"])
