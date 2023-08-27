@@ -9,7 +9,7 @@ import pandas as pd
 from pandas import DataFrame
 from pykrx.website.krx.market.core import 상장종목검색
 
-from base.timeutil import YearMonth
+from utils.timeutil import YearMonth
 from core.repository.krx import get_ohlcv_by_ticker
 from core.repository.maria.conn import MariaConnection, maria_home
 

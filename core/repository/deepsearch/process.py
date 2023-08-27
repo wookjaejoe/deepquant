@@ -5,7 +5,7 @@ import pandas as pd
 from pymongo import MongoClient
 
 from base import log
-from base.timeutil import YearQuarter, month_to_quarter
+from utils.timeutil import YearQuarter, month_to_quarter
 from config import config
 from core.repository.maria.conn import maria_home
 

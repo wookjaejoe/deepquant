@@ -7,7 +7,7 @@ from dart_fss.filings import search
 from dart_fss.fs.extract import analyze_xbrl
 from pymongo import MongoClient
 
-from base import pdutil
+from utils import pdutil
 from config import config
 from core.repository.dartx import OpenDartApiKey
 from datetime import datetime

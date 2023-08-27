@@ -2,8 +2,7 @@ import numpy as np
 
 from core.repository import FinanceLoader
 from core.repository.krx import get_ohlcv_latest
-from base.timeutil import YearQuarter
-from core.strategy import recipe
+from utils.timeutil import YearQuarter
 
 fin_loader = FinanceLoader()
 table = get_ohlcv_latest().set_index("code")
@@ -33,15 +32,10 @@ recipes = {
         "성장_순이익종합": 3,
         "성장_매출종합": 2,
     },
-    "v3": recipe,
-    "v4": {
+    "recipe": {
         "P": -1,
         "벨류": 1,
         "성장": 1
-    },
-    "recipe": {
-        "v3": 1,
-        "v4": 1
     }
 }
 
@@ -93,5 +87,8 @@ append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
 table = table.sort_values("recipe_rank")
-table[["v3_rank", "v4_rank", "recipe_rank", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]].to_csv("pick.csv")
+table[[
+    "recipe_rank", "name", "open", "close",
+    "P_pct", "벨류_pct", "성장_pct", "tags"
+]].to_csv("pick.csv")
 print("Done.")

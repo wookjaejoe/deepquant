@@ -1,9 +1,10 @@
+import numpy as np
 import pandas as pd
 
-from base.timeutil import YearQuarter
+from utils.timeutil import YearQuarter
 from core.repository.maria.conn import maria_home
 from core.repository.mongo import ds
-from core.repository.maria.stocks import get_stocks
+from core.repository.maria.stocks import get_stocks, find_stock, find_corp
 
 FinanceAlias = {
     "자산총계": "A",  # Asset
@@ -22,7 +23,6 @@ class Growth:
 
 
 def select_fs_div(data: pd.DataFrame):
-    # fixme: 분기별 CFS 우선. 재귀로 해결해야할듯 data.groupby(["bsns_year", "reprt_code"]).apply(prioritize_cfs)
     assert data["fs_div"].isin(["연결", "별도"]).all()
     if not data[data["fs_div"] == "연결"].empty:
         return "연결"
@@ -42,8 +42,8 @@ class FinanceLoader:
         3분기보고서 : 11014
         사업보고서 : 11011
         """
-        self._table = pd.read_sql(f"select * from finance", maria_home()).set_index("code")
-        # fixme: __init__ 안의 코드는 데이터 수집이 끝난 이후 변경될 예정
+        self._table = pd.read_sql(f"select * from fs", maria_home()).set_index("code")
+        self._table.fillna(np.nan)
 
     def _load_from_table(self, yq: YearQuarter):
         result = self._table[(self._table["year"] == yq.year) & (self._table["qtr"] == yq.quarter)]

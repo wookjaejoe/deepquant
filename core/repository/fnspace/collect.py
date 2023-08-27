@@ -1,35 +1,54 @@
-import pandas as pd
+import logging
+from datetime import datetime
 
-from core.repository.fnspace import account
+from pymongo import MongoClient
+
+from config import config
 from core.repository.fnspace.client import fetch_finance
-from core.repository.maria.conn import maria_home
 
-db = maria_home()
+_logger = logging.getLogger(__name__)
+_mongo_client = MongoClient(config["mongo"]["url"])
+_mongo_clt = _mongo_client["finance"]["fnSpaceFinanceApi"]
 
 
-def _fetch_and_upload(code: str, items: list, year: int, month: int, sep: bool):
-    df = fetch_finance(
+def _collect_if_not_exist(code: str, item: str, year: int, month: int, sep: bool):
+    """
+    MongoDB에 데이터 없으면 새로 API 호출해서 데이터 추가
+    """
+    body = fetch_finance(
         code=code,
-        item=items,
+        item=item,
         sep=sep,
         year=year,
         month=month
     )
-    if df is not None:
-        df.to_sql("fnspace_finance", db, if_exists="append", index=False)
+    _mongo_clt.insert_one(body)
 
 
-def fetch_and_upload_both(code: str, year: int, month: int):
-    query = f"""
-    select distinct
-    consolgb, item from fnspace_finance
-    where CODE = '{code}' and FS_YEAR = {year} and FS_MONTH = FS_MONTH
-    """
-    records = pd.read_sql(query, db)
-    items = [acc for acc in account.majors if acc not in records[records["consolgb"] == "C"]["item"].values]
-    if len(items) > 0:
-        _fetch_and_upload(code=code, items=items, year=year, month=month, sep=False)
+def collect_if_not_exist(code: str, year: int, month: int, item: str):
+    params = {
+        "code": code,
+        "item": item,
+        "year": year,
+        "month": month,
+        "sep": False
+    }
 
-    items = [acc for acc in account.majors if acc not in records[records["consolgb"] == "I"]["item"].values]
-    if len(items) > 0:
-        _fetch_and_upload(code=code, items=items, year=year, month=month, sep=True)
+    # 연결재무재표 없으면 수집
+    if _mongo_clt.find_one({"params": params}) is None:
+        body = fetch_finance(**params)
+        _mongo_clt.insert_one({
+            "params": params,
+            "response": body,
+            "requestTime": datetime.now()
+        })
+
+    # 별도재무데표 없으면 수집
+    params["sep"] = True
+    if _mongo_clt.find_one({"params": params}) is None:
+        body = fetch_finance(**params)
+        _mongo_clt.insert_one({
+            "params": params,
+            "response": body,
+            "requestTime": datetime.now()
+        })

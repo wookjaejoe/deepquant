@@ -3,13 +3,13 @@ import pandas as pd
 import requests
 
 from base.error import HttpRequestNotOk
-from base.pdutil import sort_columns
+from utils.pdutil import sort_columns
 from config import config
 from .error import FnSpaceRequestError
 from typing import *
 
 
-def check_response(res):
+def _check_response(res):
     if res.status_code != 200:
         raise HttpRequestNotOk(res.status_code)
 
@@ -20,14 +20,14 @@ def check_response(res):
 
 def fetch_finance(
     code: str,
-    item: str | list,
+    item: str,
     sep: bool,
     year: int,
     month: int
-) -> Optional[pd.DataFrame]:
+) -> dict:
     year_month = f"{year}{str(month).zfill(2)}"
     code = f"A{code}" if len(code) == 6 else code
-    content = _fetch(
+    return _call_api(
         code=code,
         item=item,
         consolgb="I" if sep else "C",
@@ -36,10 +36,9 @@ def fetch_finance(
         fraccyear=year_month,
         toaccyear=year_month
     )
-    return parse_response(content)
 
 
-def _fetch(
+def _call_api(
     code: str,
     item: str,
     consolgb: str,
@@ -75,12 +74,12 @@ def _fetch(
     }
 
     res = requests.get("https://www.fnspace.com/Api/FinanceApi", params=params)
-    check_response(res)
+    _check_response(res)
     body = res.json()
     return body
 
 
-def parse_response(body: dict) -> Optional[pd.DataFrame]:
+def _parse_response(body: dict) -> Optional[pd.DataFrame]:
     dataset = body["dataset"]
     if len(dataset) == 0:
         return None

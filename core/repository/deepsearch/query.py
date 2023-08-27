@@ -6,7 +6,7 @@ from requests.exceptions import Timeout
 from requests import get
 from retry import retry
 
-from base.timeutil import YearQuarter
+from utils.timeutil import YearQuarter
 from config import config
 
 _logger = logging.getLogger(__name__)
