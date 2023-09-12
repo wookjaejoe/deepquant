@@ -1,5 +1,5 @@
 import pandas as pd
-from core.repository import maria_home
+from core.repository.maria.conn import maria_home
 
 
 def get_stocks():

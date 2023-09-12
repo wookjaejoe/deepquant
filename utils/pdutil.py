@@ -7,11 +7,12 @@ import base64
 def sort_columns(
     columns: List[str],
     forward: List[str] = None,
-    backward: List[str] = None
+    backward: List[str] = None,
+    drop: List[str] = None
 ):
     forward = [] if forward is None else forward
     backward = [] if backward is None else backward
-    return forward + [c for c in columns if c not in forward + backward] + backward
+    return forward + [c for c in columns if c not in forward + backward + drop] + backward
 
 
 def find(df: pd.DataFrame, **kwargs):
