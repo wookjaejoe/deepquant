@@ -11,8 +11,8 @@ _port = _config_maria['port']
 _db = "finance"
 
 
-def maria_home() -> sqlalchemy.engine.Engine:
-    return sqlalchemy.create_engine(f"mysql+pymysql://{_username}:{_password}@{_host}:{_port}/{_db}")
+def maria_home(dbname: str = _db) -> sqlalchemy.engine.Engine:
+    return sqlalchemy.create_engine(f"mysql+pymysql://{_username}:{_password}@{_host}:{_port}/{dbname}")
 
 
 class MariaConnection:

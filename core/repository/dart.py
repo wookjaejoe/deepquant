@@ -12,7 +12,7 @@ import xmltodict
 from requests import get
 
 from core.repository import maria
-from core.repository.dartx import OpenDartApiKey
+from core.dartx import OpenDartApiKey
 
 
 @dataclass

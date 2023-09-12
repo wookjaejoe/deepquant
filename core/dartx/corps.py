@@ -6,7 +6,7 @@ import pandas as pd
 import requests
 
 from core.repository import maria_home
-from core.repository.dartx.apikey import OpenDartApiKey
+from core.dartx.apikey import OpenDartApiKey
 from retry import retry
 
 _logger = logging.getLogger()

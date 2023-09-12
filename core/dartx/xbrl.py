@@ -9,7 +9,7 @@ from pymongo import MongoClient
 
 from utils import pdutil
 from config import config
-from core.repository.dartx import OpenDartApiKey
+from core.dartx import OpenDartApiKey
 from datetime import datetime
 
 import logging

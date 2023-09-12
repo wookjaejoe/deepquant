@@ -10,7 +10,7 @@ import dart_fss as dart
 from pymongo import MongoClient
 
 from config import config
-from core.repository.dartx import OpenDartApiKey
+from core.dartx import OpenDartApiKey
 from core.repository.deepsearch.query import query2
 from base import log
 from core.repository.krx import get_ohlcv_latest

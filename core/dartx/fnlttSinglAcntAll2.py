@@ -17,7 +17,7 @@ from pymongo import MongoClient
 from config import config
 from core.repository import maria_home
 from core.repository import get_stocks, find_corp
-from core.repository.dartx.search import get_fnqtr, get_fnym
+from core.dartx.search import get_fnym
 from utils import pdutil
 
 _logger = logging.getLogger(__name__)

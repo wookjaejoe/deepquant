@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 from retry import retry
 
-from core.repository.dartx.apikey import OpenDartApiKey
+from core.dartx.apikey import OpenDartApiKey
 from core.repository.maria.stocks import find_stock
 from utils.timeutil import YearQuarter, YearMonth
 

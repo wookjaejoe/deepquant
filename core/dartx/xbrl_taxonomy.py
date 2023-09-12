@@ -29,7 +29,7 @@ SCE2	    자본변동표	        개별
 """
 import requests
 
-from core.repository.dartx import OpenDartApiKey
+from core.dartx import OpenDartApiKey
 import pandas as pd
 from core.repository import maria_home
 

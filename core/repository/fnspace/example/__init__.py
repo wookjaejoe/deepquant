@@ -2,9 +2,9 @@
 Dart 공시 보고서 조회하고, FnSpace 에 재무정보 조회 API 호출하여 MongoDB에 수집한다.
 """
 
-from core.repository.dartx.search import search_reports
+from core.dartx.search import search_reports
 from core.repository import get_stocks
-from core.repository.dartx.search import get_fnym
+from core.dartx.search import get_fnym
 from core.repository.fnspace.collect import collect_if_not_exist
 from core.repository.fnspace import account
 from base import log

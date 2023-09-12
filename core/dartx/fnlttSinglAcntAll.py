@@ -12,9 +12,9 @@ from retry import retry
 
 from config import config
 from core.repository import get_stocks
-from core.repository.dartx.apikey import OpenDartApiKey
-from core.repository.dartx.search import get_fnqtr, get_fnym
-from core.repository.dartx.search import search_reports
+from core.dartx.apikey import OpenDartApiKey
+from core.dartx.search import get_fnqtr, get_fnym
+from core.dartx.search import search_reports
 
 _logger = logging.getLogger(__name__)
 _mongo_client = MongoClient(config["mongo"]["url"])
