@@ -121,7 +121,6 @@ class FsAlpha:
                 df["date"] = pd.to_datetime(df["date"]).dt.date
                 df["consolidated"] = consolidated
                 assert df["symbol"].nunique() == 1
-                code = df["symbol"].iloc[0].split(":")[1]
                 df = df.drop(columns=["symbol", "entity_name"])  # 불필요한 칼럼 제거
                 df = df.dropna()
                 self.update(code, df)
