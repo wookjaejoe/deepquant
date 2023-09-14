@@ -4,7 +4,7 @@ import numpy as np
 
 from core.repository import FinanceLoader
 from dataleft.app import app
-from utils.timeutil import YearQuarter
+from utils.timeutil import YearQtr
 
 _logger = logging.getLogger()
 
@@ -20,7 +20,7 @@ def _fs(
     start: int,
     end: int
 ):
-    result = _loader.load_by_qtr(YearQuarter(year, qtr))
+    result = _loader.load_by_qtr(YearQtr(year, qtr))
     result = result.fillna(np.nan)
     result = result.replace(np.nan, None)
     result = result.reset_index().dropna().to_dict("records")

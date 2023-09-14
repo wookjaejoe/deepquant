@@ -77,7 +77,7 @@ class FsAlpha:
         return result
 
     def make_table(self, db_name: str, table_name: str):
-        self.transform().to_sql("fs", maria_home("finance"), index=False)
+        self.transform().to_sql(table_name, maria_home(db_name), index=False)
 
     def summary(self, code: str):
         query = f"""

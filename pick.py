@@ -1,12 +1,11 @@
 import numpy as np
 
-from core.repository import FinanceLoader
+from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
-from utils.timeutil import YearQuarter
 
-fin_loader = FinanceLoader()
+fin_loader = FsLoader()
 table = get_ohlcv_latest().set_index("code")
-table = table.join(fin_loader.load_by_qtr(YearQuarter(2023, 2)))
+table = table.join(fin_loader.load(2023, 2))
 table = table.rename(columns={
     "cap": "P",
 })

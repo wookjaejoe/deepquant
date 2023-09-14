@@ -112,7 +112,7 @@ def _fetch_reports(
             args = {
                 "corp_code": report["corp_code"],
                 "bsns_year": fnym.year,
-                "reprt_code": reprt_codes[fnqtr.quarter],
+                "reprt_code": reprt_codes[fnqtr.qtr],
                 "fs_div": fs_div
             }
 

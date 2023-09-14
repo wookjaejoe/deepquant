@@ -7,7 +7,7 @@ from retry import retry
 
 from core.dartx.apikey import OpenDartApiKey
 from core.repository.maria.stocks import find_stock
-from utils.timeutil import YearQuarter, YearMonth
+from utils.timeutil import YearQtr, YearMonth
 
 
 @retry(tries=3, delay=1, jitter=10)
@@ -54,7 +54,7 @@ def search_reports(
     return df
 
 
-def get_fnqtr(name: str, fnm: int) -> Optional[YearQuarter]:
+def get_fnqtr(name: str, fnm: int) -> Optional[YearQtr]:
     """
     리포트 이름으로부터 년도와 분기 정보를 획득한다. 현재는 12월 결산 기준보고서만 취급한다.
     """
@@ -67,14 +67,14 @@ def get_fnqtr(name: str, fnm: int) -> Optional[YearQuarter]:
     if "분기보고서" in name:
         if m == (fnm + 3) % 12:
             # 1분기: 결산월+3개월
-            result = YearQuarter(y, 1)
+            result = YearQtr(y, 1)
         elif m == (fnm + 9) % 12:
             # 3분기: 결산월+9개월
-            result = YearQuarter(y, 3)
+            result = YearQtr(y, 3)
     elif "반기보고서" in name and m == (fnm + 6) % 12:
-        result = YearQuarter(y, 2)
+        result = YearQtr(y, 2)
     elif "사업보고서" in name and m == fnm:
-        result = YearQuarter(y, 4)
+        result = YearQtr(y, 4)
 
     return result
 

@@ -12,6 +12,7 @@ def sort_columns(
 ):
     forward = [] if forward is None else forward
     backward = [] if backward is None else backward
+    drop = [] if drop is None else drop
     return forward + [c for c in columns if c not in forward + backward + drop] + backward
 
 

@@ -6,7 +6,7 @@ from requests.exceptions import Timeout
 from requests import get
 from retry import retry
 
-from utils.timeutil import YearQuarter
+from utils.timeutil import YearQtr
 from config import config
 
 _logger = logging.getLogger(__name__)
@@ -44,12 +44,12 @@ def query(title: str, year: int, quarter: int = None):
     _logger.info(f"Requesting query - title={title}, year={year}, quarter={quarter}")
 
     today = date.today()
-    last_confirmed = YearQuarter.last_confirmed(today.year, today.month)
+    last_confirmed = YearQtr.last_confirmed(today.year, today.month)
     if quarter:
-        assert last_confirmed >= YearQuarter(year, quarter)
+        assert last_confirmed >= YearQtr(year, quarter)
         params = {'input': f'상장 기업 and {title} {year}년 {quarter}분기'}
     else:
-        assert last_confirmed >= YearQuarter(year, 4)
+        assert last_confirmed >= YearQtr(year, 4)
         params = {'input': f'상장 기업 and {title} {year}'}
 
     return _query(params)

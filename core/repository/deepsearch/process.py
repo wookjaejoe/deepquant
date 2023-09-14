@@ -5,7 +5,7 @@ import pandas as pd
 from pymongo import MongoClient
 
 from base import log
-from utils.timeutil import YearQuarter, month_to_quarter
+from utils.timeutil import YearQtr, month_to_quarter
 from config import config
 from core.repository.maria.conn import maria_home
 
@@ -19,7 +19,7 @@ _mariadb = maria_home()
 
 def date_to_quarter(s: str):
     d = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S").date()
-    return YearQuarter(year=d.year, quarter=month_to_quarter(d.month))
+    return YearQtr(year=d.year, qtr=month_to_quarter(d.month))
 
 
 def doc_to_frame(doc: dict):
@@ -31,7 +31,7 @@ def doc_to_frame(doc: dict):
     df.columns = [col.split(" ")[0] for col in df.columns]
     yq = df["date"].apply(lambda x: date_to_quarter(x))
     df["year"] = yq.apply(lambda x: x.year)
-    df["quarter"] = yq.apply(lambda x: x.quarter)
+    df["quarter"] = yq.apply(lambda x: x.qtr)
     df["code"] = df["symbol"].apply(lambda x: x.split(":")[1])
     df = df.drop(columns=["date", "symbol", "entity_name"])
 

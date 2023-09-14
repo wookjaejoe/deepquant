@@ -5,8 +5,9 @@ import calendar
 import math
 from abc import ABCMeta
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import *
+import calendar
 
 
 def month_to_quarter(month: int):
@@ -54,30 +55,38 @@ class Valuable(metaclass=ABCMeta):
 
 
 @dataclass
-class YearQuarter(Valuable):
+class YearQtr(Valuable):
     year: int
-    quarter: int
+    qtr: int
 
     def __str__(self):
-        return f"{self.year}-{self.quarter}Q"
+        return f"{self.year}-{self.qtr}Q"
 
     @staticmethod
     def today():
         today = date.today()
-        return YearQuarter(today.year, int(today.month / 4) + 1)
+        return YearQtr(today.year, int(today.month / 4) + 1)
 
     def value(self) -> int:
-        return self.year * 4 + self.quarter
+        return self.year * 4 + self.qtr
 
     @staticmethod
-    def from_value(value: int) -> YearQuarter:
+    def from_value(value: int) -> YearQtr:
         if value % 4 == 0:
-            return YearQuarter(int(value / 4) - 1, 4)
+            return YearQtr(int(value / 4) - 1, 4)
         else:
-            return YearQuarter(int(value / 4), value % 4)
+            return YearQtr(int(value / 4), value % 4)
+
+    def settle_date(self) -> date:
+        # fs_month 1월이면 4분기 보고서가 1월에 나옴
+        month = self.qtr * 3
+        return date(self.year, month, calendar.monthrange(self.year, month)[1])
+
+    def due_date(self):
+        return self.settle_month() + timedelta(days=90 if self.qtr == 4 else 45)
 
     @staticmethod
-    def last_confirmed(year: int, month: int) -> YearQuarter:
+    def last_confirmed(year: int, month: int) -> YearQtr:
         """
         입력된 년월의 말일에 확인 가능한 가장 최근 확정 실적 분기를 반환한다.
 
@@ -103,15 +112,15 @@ class YearQuarter(Valuable):
         """
 
         if month in [1, 2, 3]:
-            return YearQuarter(year - 1, 3)
+            return YearQtr(year - 1, 3)
         elif month in [4]:
-            return YearQuarter(year - 1, 4)
+            return YearQtr(year - 1, 4)
         elif month in [5, 6, 7]:
-            return YearQuarter(year, 1)
+            return YearQtr(year, 1)
         elif month in [8, 9, 10]:
-            return YearQuarter(year, 2)
+            return YearQtr(year, 2)
         elif month in [11, 12]:
-            return YearQuarter(year, 3)
+            return YearQtr(year, 3)
         else:
             raise Exception(f"Invalid month: {month}")
 
