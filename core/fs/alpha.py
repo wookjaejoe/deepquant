@@ -96,13 +96,15 @@ class FsAlpha:
         consolidated = df["consolidated"].unique()
         assert len(consolidated) == 1
         consolidated = int(consolidated[0])
+
         with self.db.connect() as con:
             query = f"""
             delete from `{code}`
             where consolidated = {consolidated} and date in ({date_in}) 
             """
-            con.execute(query)
+            con.execute(text(query))
             df.to_sql(code, con, if_exists="append", index=False)
+            con.commit()
 
     def update_all(self, date_from: date, date_to: date):
         num = 0
@@ -116,7 +118,8 @@ class FsAlpha:
                     date_from=date_from,
                     date_to=date_to
                 )
-                if len(df) == 0:
+
+                if df.empty:
                     continue
 
                 df["date"] = pd.to_datetime(df["date"]).dt.date
