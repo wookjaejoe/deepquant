@@ -1,4 +1,4 @@
-from dataleft.app import app
+from custardchip.app import app
 
 
 @app.get("/")
