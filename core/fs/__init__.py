@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import date, timedelta
 
 import numpy as np
@@ -16,6 +18,17 @@ AccAlias = {
     "당기순이익": "E",  # Net Income
     "배당금지급": "D"
 }
+
+
+def load_ifrs():
+    result = pd.read_sql(f"select * from ifrs", maria_home("finance"))
+    result = result.rename(columns={
+        "reportId": "report_id",
+        "accountId": "account_id",
+        "accountName": "account_name",
+    })
+    result["account_id"] = result["account_id"].astype(str)
+    return result
 
 
 class Growth:
@@ -40,23 +53,33 @@ def due_date(settle_date: date, qtr: int):
 
 
 class FsLoader:
+    _fs_loader: FsLoader = None
+
+    @classmethod
+    def instance(cls):
+        if not cls._fs_loader:
+            cls._fs_loader = FsLoader()
+
+        return cls._fs_loader
+
     def __init__(self):
-        self._table = pd.read_sql(f"select * from fs where date >= '2013-12-31'", maria_home("finance"))
-        self._table = self._table[self._table["qtr"] * 3 == self._table["month"]]
-        self._table.fillna(np.nan, inplace=True)
-        self._table.rename(columns={"date": "settle_date"}, inplace=True)
-        self._table["due_date"] = self._table.apply(lambda row: due_date(row["settle_date"], row["qtr"]), axis=1)
-        self._table.reset_index(drop=True, inplace=True)
-        self._table = self._table[pdutil.sort_columns(
-            self._table.columns,
+        ifrs = load_ifrs()
+        self.table = pd.read_sql(f"select * from fs", maria_home("finance"))
+        self.table = self.table[self.table["qtr"] * 3 == self.table["month"]]
+        self.table.fillna(np.nan, inplace=True)
+        self.table.rename(columns={"date": "settle_date"}, inplace=True)
+        self.table["due_date"] = self.table.apply(lambda row: due_date(row["settle_date"], row["qtr"]), axis=1)
+        self.table.reset_index(drop=True, inplace=True)
+        self.table = self.table[pdutil.sort_columns(
+            self.table.columns,
             ["code", "settle_date", "due_date", "qtr", "consolidated"])
         ]
-        self._table.sort_values("settle_date", ascending=False, inplace=True)
+        self.table.sort_values("settle_date", ascending=False, inplace=True)
 
     def load(self, year: int, qtr: int):
         yq = YearQtr(year, qtr)
         # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
-        fins = [pdutil.find(self._table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(6)]
+        fins = [pdutil.find(self.table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(6)]
         selector = pd.MultiIndex.from_frame(
             fins[0].groupby(["code"]).apply(select_consolidation).to_frame().reset_index())
         fins = [fin.set_index(["code", "consolidated"]) for fin in fins]
@@ -74,7 +97,6 @@ class FsLoader:
             result[f"{AccAlias[col]}/Y"] = pd.concat([fins[i][col].rename(i) for i in range(4)], axis=1).sum(axis=1)
 
         result["배당성향"] = result["배당금지급/Y"] / result["E/Y"]
-        result[result["배당성향"] <= 0]["배당성향"] = 0
 
         for col in is_cols:
             result[f"{AccAlias[col]}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])

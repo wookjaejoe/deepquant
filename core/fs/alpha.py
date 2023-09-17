@@ -6,6 +6,7 @@ import pandas as pd
 from core.ds import GetFinancialStatements
 from core.repository import maria_home
 from utils import pdutil
+from sqlalchemy import text
 
 _logger = logging.getLogger()
 
@@ -33,7 +34,7 @@ class FsAlpha:
     @property
     def codes(self):
         with self.db.connect() as con:
-            return [row[0] for row in con.execute("show tables")]
+            return [row[0] for row in con.execute(text("show tables"))]
 
     def table(self, code: str):
         acc = ", ".join([f"'{x}'" for x in white_accounts.keys()])
@@ -79,9 +80,9 @@ class FsAlpha:
     def make_table(self, db_name: str, table_name: str):
         self.transform().to_sql(table_name, maria_home(db_name), index=False)
 
-    def summary(self, code: str):
+    def reports(self, code: str):
         query = f"""
-        select date, consolidated, count(*) as count
+        select date, type_id, consolidated, count(*) as count
         from `{code}`
         group by date, consolidated;
         """
