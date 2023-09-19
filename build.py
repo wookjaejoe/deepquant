@@ -6,7 +6,8 @@ import subprocess
 from about import version
 
 DOCKER_REGISTRY_ADDR = 'jowookjae.in:5000'
-IMAGE_NAME = f'{DOCKER_REGISTRY_ADDR}/deepquant-server:{version}'
+APP_NAME = "custardchip-api-server"
+IMAGE_NAME = f'{DOCKER_REGISTRY_ADDR}/{APP_NAME}:{version}'
 
 
 def build():
@@ -30,7 +31,7 @@ def main():
 
     print('=' * 80)
     print('Execute the command below to run the container in the target host:')
-    options = "-d --restart=unless-stopped -p 8888:8080 --name deepquant-server --restart unless-stopped"
+    options = f"-d --restart=unless-stopped -p 8888:8080 --name {APP_NAME} --restart unless-stopped"
     print(f"docker run {options} {IMAGE_NAME}")
     print('=' * 80)
 

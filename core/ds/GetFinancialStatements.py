@@ -13,7 +13,7 @@ _logger = logging.getLogger()
 auth = config["deepSearchAuth"]
 
 
-@retry(tries=3, delay=1, jitter=1)
+@retry(tries=5, delay=1, jitter=1)
 def _call_api(
     entities: str | List[str],
     consolidated: bool,

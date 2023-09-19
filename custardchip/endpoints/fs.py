@@ -45,7 +45,7 @@ def get_stocks(request: Request):
 
 @app.get("/reports/{code}")
 @limit_by_address(limit_opt)
-def fs(request: Request, code: str):
+def reports(request: Request, code: str):
     result = fs_alpha.reports(code)
     result["qtr"] = result["type_id"].replace({qtr_to_type(qtr): qtr for qtr in [1, 2, 3, 4]})
     result = result[["date", "qtr", "consolidated"]]
@@ -54,7 +54,7 @@ def fs(request: Request, code: str):
 
 @app.get("/fs/{code}")
 @limit_by_address(limit_opt)
-def fs_detail(
+def fs(
     request: Request,
     code: str,
     year: int,
