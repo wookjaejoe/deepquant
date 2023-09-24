@@ -9,31 +9,19 @@ from datetime import datetime
 
 __debug = False
 
-DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 LOG_FOLDER = os.path.abspath('.log')
 os.makedirs(LOG_FOLDER, exist_ok=True)
 
-LOG_FORMAT_DETAILS = '%(name)s, %(asctime)s, %(levelname)-8s, %(message)s'
-
-
-class ConsoleLogFormatter(logging.Formatter):
-    def __init__(self):
-        # noinspection SpellCheckingInspection
-        logging.Formatter.__init__(self,
-                                   fmt=LOG_FORMAT_DETAILS, datefmt=DATE_FORMAT)
-
-
-class FileLogFormatter(logging.Formatter):
-    def __init__(self):
-        # noinspection SpellCheckingInspection
-        logging.Formatter.__init__(self,
-                                   fmt=LOG_FORMAT_DETAILS, datefmt=DATE_FORMAT)
+DEFAULT_LOG_FORMATTER = logging.Formatter(
+    fmt="[%(asctime)s.%(msecs)03d] [%(levelname)-4s] [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 
 def _create_stream_handler(level: int = logging.INFO):
     stream_handler = logging.StreamHandler(stream=sys.stdout)
     stream_handler.setLevel(level)
-    stream_handler.setFormatter(ConsoleLogFormatter())
+    stream_handler.setFormatter(DEFAULT_LOG_FORMATTER)
     return stream_handler
 
 
@@ -45,16 +33,17 @@ def _create_file_handler(level: int = logging.DEBUG):
         maxBytes=4 * 1024 * 1024,
         backupCount=2)
     file_handler.setLevel(level)
-    file_handler.setFormatter(FileLogFormatter())
+    file_handler.setFormatter(DEFAULT_LOG_FORMATTER)
     return file_handler
 
 
 def init(level: int = logging.INFO):
-    logging.basicConfig(datefmt=DATE_FORMAT,
-                        level=level)
+    logging.basicConfig(level=level)
     root_logger = logging.getLogger()
-    root_logger.handlers = [_create_stream_handler(level=level),
-                            _create_file_handler(level=level)]
+    root_logger.handlers = [
+        _create_stream_handler(level=level),
+        _create_file_handler(level=level)
+    ]
 
 
 logger = logging.getLogger()
