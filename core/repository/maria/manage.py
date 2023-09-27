@@ -6,12 +6,10 @@ from queue import Queue
 from threading import Thread
 
 import pandas as pd
-from pandas import DataFrame
-from pykrx.website.krx.market.core import 상장종목검색
 
-from utils.timeutil import YearMonth
-from core.repository.krx import get_ohlcv_by_ticker
+from core.repository.krx import get_ohlcv_by_ticker, get_ohlcv_by_date
 from core.repository.maria.conn import MariaConnection, maria_home
+from utils.timeutil import YearMonth
 
 db = maria_home()
 
@@ -65,7 +63,6 @@ class ChartTableGenerator:
                 ticker=code,
                 adjusted=False
             )
-            df["code"] = code
             df = df.set_index(["code", "date"]).sort_index()
             self.queue.put(df)
         except KeyboardInterrupt as e:
@@ -114,23 +111,6 @@ def upload_chart(codes: list):
         conn.query(f"INSERT INTO chart SELECT * FROM {table_name};")
         conn.commit()
 
-    # todo: make primary key (code, date)
-
-
-def update_stocks() -> DataFrame:
-    df = 상장종목검색().fetch()
-    df = df[["short_code", "codeName", "marketName"]]
-    df.columns = ["code", "name", "exchange"]
-
-    table_name = "stock_" + date.today().strftime('%Y%m%d')
-    df.to_sql(table_name, db, if_exists="replace", index=False)
-
-    with MariaConnection() as conn:
-        conn.query("drop table if exists stock")
-        conn.query(f"create table stock as select * from {table_name}")
-
-    return df
-
 
 def upload_chart_from_krx():
     stocks = pd.read_sql("select * from stock", maria_home())
@@ -146,20 +126,31 @@ def _update_chart_by_code(code: str, fromdate: date, todate: date):
         ticker=code,
         adjusted=False
     )
-    df["code"] = code
     df = df.set_index(["code", "date"]).sort_index()
     df.to_sql("chart", db, if_exists="append", index=True)
-    print()
 
 
 def update_chart(fromdate: date):
-    stocks = pd.read_sql("select * from stock", maria_home())
+    stocks = pd.read_sql("select * from stocks", maria_home())
     codes = stocks["code"]
     num = 1
     for code in codes:
         print(f"[{num}/{len(codes)}]", code)
         _update_chart_by_code(code, fromdate, date.today() - timedelta(days=1))
         num += 1
+
+
+def update_chart2(fromdate: date, todate: date):
+    target_date = fromdate
+    while True:
+        if target_date > todate:
+            break
+
+        df = get_ohlcv_by_date(target_date)
+        df = df.set_index(["code", "date"]).sort_index()
+        df.to_sql("chart", db, if_exists="append", index=True)
+
+        target_date += timedelta(days=1)
 
 
 def _create_month_chart_table(table_name: str):
