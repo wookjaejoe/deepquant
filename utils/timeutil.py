@@ -7,7 +7,6 @@ from abc import ABCMeta
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import *
-import calendar
 
 
 def month_to_quarter(month: int):
@@ -77,13 +76,32 @@ class YearQtr(Valuable):
         else:
             return YearQtr(int(value / 4), value % 4)
 
+    @property
     def settle_date(self) -> date:
         # fs_month 1월이면 4분기 보고서가 1월에 나옴
         month = self.qtr * 3
         return date(self.year, month, calendar.monthrange(self.year, month)[1])
 
+    @property
     def due_date(self):
-        return self.settle_month() + timedelta(days=90 if self.qtr == 4 else 45)
+        return self.settle_date + timedelta(days=90 if self.qtr == 4 else 45)
+
+    @property
+    def pre(self):
+        return YearQtr.from_value(self.value() - 1)
+
+    @property
+    def next(self):
+        return YearQtr.from_value(self.value() + 1)
+
+    @staticmethod
+    def settled_of(when: date):
+        result = YearQtr(when.year, math.ceil(when.month / 3))
+        while True:
+            if result.due_date < when:
+                return result
+
+            result = result.pre
 
     @staticmethod
     def last_confirmed(year: int, month: int) -> YearQtr:
@@ -155,15 +173,18 @@ class YearMonth(Valuable):
         today = date.today()
         return YearMonth(today.year, today.month)
 
+    @property
     def first_date(self) -> date:
         return date(self.year, self.month, 1)
 
+    @property
     def last_date(self) -> date:
         return date(self.year, self.month, calendar.monthrange(self.year, self.month)[1])
 
     def duration(self, other) -> float:
         return (other.value() - self.value()) / 12
 
+    @property
     def next(self):
         return self.from_value(self.value() + 1)
 
@@ -171,7 +192,7 @@ class YearMonth(Valuable):
         item = self
         while item <= end:
             yield item
-            item = item.next()
+            item = item.next
 
     def __str__(self):
         return "-".join([str(self.year).ljust(4, "0"), str(self.month).rjust(2, "0")])

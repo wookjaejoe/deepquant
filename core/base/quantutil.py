@@ -2,10 +2,6 @@ from datetime import date
 from typing import *
 
 
-def xox(x1, x2, y=None):
-    return (x2 - x1) / (y if y else abs(x1))
-
-
 def cagr(initial: float, last: float, years: float):
     return (last / initial) ** (1 / years) - 1
 

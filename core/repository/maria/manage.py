@@ -1,156 +1,25 @@
-import time
-import traceback
-from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
-from queue import Queue
-from threading import Thread
+from datetime import date
 
 import pandas as pd
+import pykrx
 
-from core.repository.krx import get_ohlcv_by_ticker, get_ohlcv_by_date
+from core.repository.krx import get_ohlcv_by_date
 from core.repository.maria.conn import MariaConnection, maria_home
-from utils.timeutil import YearMonth
-
-db = maria_home()
-
-
-def drop_table_if_exists(table_name: str):
-    with MariaConnection() as conn:
-        conn.query(f"drop table if exists {table_name}")
-
-
-def create_primary_key(table_name: str, col_names: list, if_not_exists: bool = True):
-    col_names_str = ", ".join(col_names)
-    with db.connect() as conn:
-        if if_not_exists and db.execute(f"SHOW INDEX FROM {table_name} WHERE Key_name = 'PRIMARY';").rowcount > 0:
-            return
-
-        conn.execute(f"ALTER TABLE {table_name} ADD PRIMARY KEY ({col_names_str});")
-
-
-class ChartTableGenerator:
-    def __init__(self, table_name):
-        self.queue = Queue()
-        self.table_name = table_name
-        self.fromdate = '20000101'
-        self.todate = (date.today() - timedelta(days=1)).strftime('%Y%m%d')
-
-    def _consume_queue(self):
-        while True:
-            df = self.queue.get()
-            if df is None:
-                break
-
-            try:
-                df.to_sql(self.table_name, db, if_exists="append", index=True, dtype={'code': 'VARCHAR(6)'})
-            except:
-                traceback.print_exc()
-
-    def _start_consume(self):
-        queue_consumer = Thread(target=self._consume_queue)
-        queue_consumer.start()
-
-    def _stop_consume(self):
-        self.queue.put(None)
-
-    # @retry(tries=5, delay=10)
-    def _fetch_ohlcv(self, code):
-        print(code)
-        try:
-            df = get_ohlcv_by_ticker(
-                fromdate=self.fromdate,
-                todate=self.todate,
-                ticker=code,
-                adjusted=False
-            )
-            df = df.set_index(["code", "date"]).sort_index()
-            self.queue.put(df)
-        except KeyboardInterrupt as e:
-            raise e
-        except BaseException as e:
-            traceback.print_exc()
-
-    def run(self, codes: list):
-        self._start_consume()
-
-        try:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                # 각 아이템에 대해 run 함수를 호출하여 병렬 처리
-                executor.map(self._fetch_ohlcv, codes)
-
-            create_primary_key(table_name=self.table_name, col_names=["code", "date"])
-
-        finally:
-            while not self.queue.empty():
-                time.sleep(1)
-
-            print(f"Queue empty: {self.queue.empty()}")
-            print("Stop comsuming...")
-            self._stop_consume()
-
-
-def upload_chart(codes: list):
-    print("Starting to update chart...")
-
-    todate = date.today().strftime('%Y%m%d')
-    table_name = f"chart_{todate}"
-
-    try:
-        excludes = list(pd.read_sql(f"select distinct code from {table_name}", maria_home())["code"])
-    except:
-        excludes = []
-
-    codes = [code for code in codes if code not in excludes]
-
-    ChartTableGenerator(table_name).run(codes)
-
-    drop_table_if_exists("chart")
-
-    with MariaConnection() as conn:
-        conn.query(f"CREATE TABLE chart LIKE {table_name};")
-        conn.query(f"INSERT INTO chart SELECT * FROM {table_name};")
-        conn.commit()
-
-
-def upload_chart_from_krx():
-    stocks = pd.read_sql("select * from stock", maria_home())
-    upload_chart(list(stocks["code"]))
-
-
-def _update_chart_by_code(code: str, fromdate: date, todate: date):
-    fromdate = fromdate.strftime('%Y%m%d')
-    todate = todate.strftime('%Y%m%d')
-    df = get_ohlcv_by_ticker(
-        fromdate=fromdate,
-        todate=todate,
-        ticker=code,
-        adjusted=False
-    )
-    df = df.set_index(["code", "date"]).sort_index()
-    df.to_sql("chart", db, if_exists="append", index=True)
+from utils import pdutil
 
 
 def update_chart(fromdate: date):
-    stocks = pd.read_sql("select * from stocks", maria_home())
-    codes = stocks["code"]
-    num = 1
-    for code in codes:
-        print(f"[{num}/{len(codes)}]", code)
-        _update_chart_by_code(code, fromdate, date.today() - timedelta(days=1))
+    db = maria_home()
+    dates = pd.read_sql("select distinct date from index_chart", maria_home("finance"))["date"]
+    dates = [d for d in dates if d >= fromdate]
+    num = 0
+    for target_date in dates:
         num += 1
-
-
-def update_chart2(fromdate: date, todate: date):
-    target_date = fromdate
-    while True:
-        if target_date > todate:
-            break
-
+        print(f"[{num}/{len(dates)}]", target_date)
         df = get_ohlcv_by_date(target_date)
+        df = df[[col for col in df.columns if not col.startswith("_")]]
         df = df.set_index(["code", "date"]).sort_index()
-        df.to_sql("chart", db, if_exists="append", index=True)
-
-        target_date += timedelta(days=1)
+        df.to_sql("chart2", db, if_exists="append", index=True)
 
 
 def _create_month_chart_table(table_name: str):
@@ -205,22 +74,19 @@ def insert_month_chart(table_name: str, year: int, month: int):
         conn.commit()
 
 
-def upload_month_chart():
+def update_index_tickers(fromdate: str = "19600101"):
     todate = date.today().strftime('%Y%m%d')
-    table_name = f"month_chart_{todate}"
 
-    drop_table_if_exists(table_name)
-    _create_month_chart_table(table_name)
-
-    dates = pd.read_sql("select distinct date from chart", maria_home())["date"]
-    yms = sorted({YearMonth.from_date(d) for d in dates})
-    assert len(yms) == len(set(yms))
-    for ym in min(yms).to(max(yms)):
-        print(ym)
-        insert_month_chart(table_name, ym.year, ym.month)
-
-    drop_table_if_exists("month_chart")
-    _create_month_chart_table("month_chart")
-    with MariaConnection() as conn:
-        conn.query(f"insert into month_chart (select * from {table_name})")
-        conn.commit()
+    tickers = ["1001", "2001"]
+    for ticker in tickers:
+        db = maria_home("finance")
+        df = pykrx.stock.get_index_ohlcv(
+            fromdate=fromdate,
+            todate=todate,
+            ticker=ticker
+        )
+        df["ticker"] = ticker
+        df["date"] = df.index
+        df["date"] = df["date"].dt.date
+        df = df[pdutil.sort_columns(df.columns, ["ticker", "date"])]
+        df.to_sql("index_chart", db, index=False, if_exists="append")

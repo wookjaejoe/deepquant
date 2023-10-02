@@ -2,11 +2,12 @@ import logging
 from datetime import date
 
 import pandas as pd
+from sqlalchemy import text
 
 from core.ds import GetFinancialStatements
 from core.repository import maria_home
 from utils import pdutil
-from sqlalchemy import text
+from multiprocessing.pool import ThreadPool
 
 _logger = logging.getLogger()
 
@@ -28,36 +29,39 @@ white_accounts = {
 
 class FsAlpha:
     @property
-    def db(self):
+    def con(self):
         return maria_home("fs")
 
     @property
     def codes(self):
-        with self.db.connect() as con:
+        with self.con.connect() as con:
             return [row[0] for row in con.execute(text("show tables"))]
 
-    def table(self, code: str):
+    def table(self, code: str, con=None):
+        """
+        :param code: 종목코드 6자리 문자열
+        :param con: 커넥션 객체, 미 입력시 새로 연결
+        """
+        if not con:
+            con = self.con
+
         acc = ", ".join([f"'{x}'" for x in white_accounts.keys()])
         query = f"""
         select * from `{code}`
-        where concat(report_id, ':', account_id) in ({acc}) and date > '2012-12-31'
+        where concat(report_id, ':', account_id) in ({acc})
         """
-        return pd.read_sql(query, self.db)
+        return pd.read_sql(query, con)
 
     def transform(self):
         """
         두번째 형식으로 변형
         """
-        result = pd.DataFrame()
-        total = len(self.codes)
-        num = 0
-        for code in self.codes:
-            num += 1
-            _logger.info(f"[{num}/{total}] {code} ({round(num / total * 100)}%)")
-            df = self.table(code)
+        con = self.con
 
+        def transform_one(code: str):
+            df = self.table(code, con)
             if df.empty:
-                continue
+                return
 
             df["title"] = df[["report_id", "account_id"]].apply(lambda x: white_accounts[":".join(x)], axis=1)
             df = df.pivot_table(
@@ -69,15 +73,19 @@ class FsAlpha:
             df["month"] = df["date"].apply(lambda x: x.month)
             df["qtr"] = df["type_id"].replace({["F", "B", "T", "K"][q - 1]: q for q in [1, 2, 3, 4]})
             df["code"] = code
-            df = df[pdutil.sort_columns(
+            return df[pdutil.sort_columns(
                 df.columns,
                 forward=["code", "date", "year", "month", "qtr"],
                 drop=["type_id"])]
-            result = pd.concat([result, df])
 
+        with ThreadPool(processes=16) as pool:
+            results = pool.map(transform_one, self.codes)
+            results = [r for r in results if r is not None]
+
+        result = pd.concat(results)
         return result
 
-    def make_table(self, db_name: str, table_name: str):
+    def make_table(self, db_name: str = "finance", table_name: str = "fs"):
         self.transform().to_sql(table_name, maria_home(db_name), index=False)
 
     def reports(self, code: str):
@@ -86,7 +94,7 @@ class FsAlpha:
         from `{code}`
         group by date, consolidated;
         """
-        return pd.read_sql(query, self.db)
+        return pd.read_sql(query, self.con)
 
     def update(self, code: str, df: pd.DataFrame):
         if df.empty:
@@ -97,7 +105,7 @@ class FsAlpha:
         assert len(consolidated) == 1
         consolidated = int(consolidated[0])
 
-        with self.db.connect() as con:
+        with self.con.connect() as con:
             query = f"""
             delete from `{code}`
             where consolidated = {consolidated} and date in ({date_in}) 

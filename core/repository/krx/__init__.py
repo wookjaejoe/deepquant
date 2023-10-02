@@ -14,7 +14,7 @@ _KRX_TABLE_COLUMNS = {
     "ISU_CD": "_ISU_CD",
     "ISU_ABBRV": "name",
     "MKT_NM": "market_name",
-    "SECT_TP_NAME": "sector_type",
+    "SECT_TP_NM": "_SECT_TP_NM",
     "TDD_CLSPRC": "close",
     "FLUC_TP_CD": "_FLUC_TP_CD",
     "CMPPREVDD_PRC": "_CMPPREVDD_PRC",
@@ -52,6 +52,9 @@ def get_ohlcv_by_ticker(fromdate: str, todate: str, ticker: str, adjusted: bool 
     isin = get_stock_ticker_isin(ticker)
     adjusted = 2 if adjusted else 1
     df = 개별종목시세().fetch(fromdate, todate, isin, adjusted)
+    if df.empty:
+        return df
+
     df = df.rename(columns=_KRX_TABLE_COLUMNS)
     df["code"] = ticker
     df["date"] = df["date"].apply(lambda x: datetime.strptime(x, "%Y/%m/%d").date())

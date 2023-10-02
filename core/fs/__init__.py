@@ -63,7 +63,6 @@ class FsLoader:
         return cls._fs_loader
 
     def __init__(self):
-        ifrs = load_ifrs()
         self.table = pd.read_sql(f"select * from fs", maria_home("finance"))
         self.table = self.table[self.table["qtr"] * 3 == self.table["month"]]
         self.table.fillna(np.nan, inplace=True)
@@ -77,6 +76,7 @@ class FsLoader:
         self.table.sort_values("settle_date", ascending=False, inplace=True)
 
     def load(self, year: int, qtr: int):
+        assert qtr in [1, 2, 3, 4]
         yq = YearQtr(year, qtr)
         # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
         fins = [pdutil.find(self.table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(6)]
@@ -86,11 +86,16 @@ class FsLoader:
         fins = [fin[fin.index.isin(selector)].reset_index(level=1) for fin in fins]
 
         result = pd.DataFrame()
+        bs_cols = ["자산총계", "자본총계"]
+        result[[AccAlias[col] for col in bs_cols]] = fins[0][bs_cols]
+
         result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
         result["순유동자산"] = fins[0]["유동자산"] - result["부채총계"]
         result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
         result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
         result["배당금지급/Y"] = pd.concat([fins[i]["배당금지급"].rename(i) for i in range(4)], axis=1).sum(axis=1)
+        result["배당금지급/Y"] = result["배당금지급/Y"].fillna(0)
+        result["확정실적"] = yq
 
         is_cols = ["매출", "매출총이익", "영업이익", "당기순이익"]
         for col in is_cols:
@@ -102,7 +107,7 @@ class FsLoader:
             result[f"{AccAlias[col]}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
 
         for is_col in is_cols:
-            for bs_col in ["자산총계", "자본총계"]:
+            for bs_col in bs_cols:
                 name = f"{AccAlias[is_col]}/{AccAlias[bs_col]}_QoQ"
                 result[name] = fins[0][is_col] / fins[0][bs_col] - fins[4][is_col] / fins[4][bs_col]
 
