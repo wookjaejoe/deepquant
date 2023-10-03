@@ -79,11 +79,18 @@ class FsLoader:
         assert qtr in [1, 2, 3, 4]
         yq = YearQtr(year, qtr)
         # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
-        fins = [pdutil.find(self.table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(6)]
+        fins = [pdutil.find(self.table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(5)]
         selector = pd.MultiIndex.from_frame(
             fins[0].groupby(["code"]).apply(select_consolidation).to_frame().reset_index())
         fins = [fin.set_index(["code", "consolidated"]) for fin in fins]
         fins = [fin[fin.index.isin(selector)].reset_index(level=1) for fin in fins]
+
+        whitelist = set(fins[0].index)
+        for fin in fins:
+            codes = set(fin.index)
+            whitelist = whitelist.intersection(codes)
+
+        fins = [fin[fin.index.isin(whitelist)] for fin in fins]
 
         result = pd.DataFrame()
         bs_cols = ["자산총계", "자본총계"]

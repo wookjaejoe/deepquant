@@ -1,7 +1,7 @@
 import pandas as pd
 
 from core.fs import load_ifrs
-from core.fs.alpha import FsAlpha
+from core.fs.db import FsDb
 from core.repository import maria_home
 from core.repository.maria.stocks import get_stocks
 from custardchip.app import app
@@ -10,7 +10,7 @@ from custardchip.limit import limit_by_address
 from starlette.requests import Request
 
 stocks = get_stocks()
-fs_alpha = FsAlpha()
+fs_alpha = FsDb()
 fs_db = maria_home("fs")
 ifrs = load_ifrs()
 ifrs = ifrs[ifrs["LV"] <= 2]

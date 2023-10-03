@@ -2,6 +2,7 @@ import numpy as np
 
 from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
+from utils import pdutil
 
 fin_loader = FsLoader()
 table = get_ohlcv_latest().set_index("code")
@@ -18,18 +19,19 @@ recipes = {
         "GP/P": 1,
         "EQ/P": 1,
     },
-    "성장_단순이익": {f"{e}_QoQ": 1 for e in ["R", "GP", "O", "E"]},
-    "성장_자산대비이익": {f"{e}/A_QoQ": 1 for e in ["R", "GP", "O", "E"]},
-    "성장_자본대비이익": {f"{e}/EQ_QoQ": 1 for e in ["R", "GP", "O", "E"]},
-    "성장_매출종합": {f"R{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
-    "성장_매출총이익종합": {f"GP{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
-    "성장_영업이익종합": {f"O{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
-    "성장_순이익종합": {f"E{b}_QoQ": 1 for b in ["", "/A", "/EQ"]},
     "성장": {
-        "성장_매출총이익종합": 5,
-        "성장_영업이익종합": 4,
-        "성장_순이익종합": 3,
-        "성장_매출종합": 2,
+        "GP/A_QoQ": 0.142706,
+        "O/A_QoQ": 0.130182,
+        "GP/EQ_QoQ": 0.129825,
+        "O/EQ_QoQ": 0.118514,
+        "E/EQ_QoQ": 0.111300,
+        "O_QoQ": 0.098340,
+        "E_QoQ": 0.097314,
+        "GP_QoQ": 0.083276,
+        "R/A_QoQ": 0.082624,
+        "E/A_QoQ": 0.079270,
+        "R/EQ_QoQ": 0.028347,
+        "R_QoQ": 0.022196,
     },
     "recipe": {
         "P": -1,
@@ -86,8 +88,10 @@ append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
 table = table.sort_values("recipe_rank")
-table[[
-    "recipe_rank", "name", "open", "close",
-    "P_pct", "벨류_pct", "성장_pct", "tags"
-]].to_csv("pick.csv")
+table[
+    pdutil.sort_columns(
+        table.columns,
+        ["recipe_rank", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]
+    )
+].to_csv("pick.csv")
 print("Done.")

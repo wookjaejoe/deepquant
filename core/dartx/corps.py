@@ -1,13 +1,14 @@
 import io
 import logging
 import zipfile
+from datetime import date
 
 import pandas as pd
 import requests
-
-from core.repository import maria_home
-from core.dartx.apikey import OpenDartApiKey
 from retry import retry
+
+from core.dartx.apikey import OpenDartApiKey
+from core.repository import maria_home
 
 _logger = logging.getLogger()
 
@@ -37,9 +38,9 @@ def fetch_corps() -> pd.DataFrame:
     )
 
 
-def update_stocks():
+def upload_stocks():
     corps = fetch_corps()
-    corps = corps[corps["stock_code"].notna()]
+    corps = corps[corps["stock_code"].str.len() == 6]
 
     companies = []
     num = 1
@@ -49,7 +50,7 @@ def update_stocks():
         num += 1
 
     companies = pd.DataFrame(companies)
-    companies.to_sql("stocks", maria_home(), index=False)
+    companies.to_sql("stocks_" + date.today().strftime("%Y%m%d"), maria_home(), index=False)
 
 
 @retry(tries=3, delay=1, jitter=5)

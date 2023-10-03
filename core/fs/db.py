@@ -27,7 +27,7 @@ white_accounts = {
 }
 
 
-class FsAlpha:
+class FsDb:
     @property
     def con(self):
         return maria_home("fs")
@@ -116,16 +116,20 @@ class FsAlpha:
 
     def update_all(self, date_from: date, date_to: date):
         num = 0
-        for code in self.codes:
+        for code in self.codes[2449:]:
             num += 1
             _logger.info(f"[{num}] {code}")
             for consolidated in [True, False]:
-                df = GetFinancialStatements.call_api(
-                    code=code,
-                    consolidated=consolidated,
-                    date_from=date_from,
-                    date_to=date_to
-                )
+                try:
+                    df = GetFinancialStatements.call_api(
+                        code=code,
+                        consolidated=consolidated,
+                        date_from=date_from,
+                        date_to=date_to
+                    )
+                except Exception as e:
+                    _logger.error(f"Failed to call API - {code, consolidated, date_from, date_to}", exc_info=e)
+                    continue
 
                 if df.empty:
                     continue
