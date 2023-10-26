@@ -110,13 +110,15 @@ class FsDb:
             delete from `{code}`
             where consolidated = {consolidated} and date in ({date_in}) 
             """
-            con.execute(text(query))
+            result = con.execute(text(query))
+            _logger.info(f"{result.rowcount} rows deleted.")
             df.to_sql(code, con, if_exists="append", index=False)
+            _logger.info(f"{len(df)} rows inserted.")
             con.commit()
 
     def update_all(self, date_from: date, date_to: date):
         num = 0
-        for code in self.codes[2449:]:
+        for code in self.codes:
             num += 1
             _logger.info(f"[{num}] {code}")
             for consolidated in [True, False]:
