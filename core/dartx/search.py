@@ -20,13 +20,13 @@ def search_reports(
     """
     공시 검색
     """
-    assert stock_code is not None or corp_code is not None
-    if corp_code is None:
+    if corp_code is None and stock_code is not None:
         corp_code = find_stock(stock_code)["corp_code"]
 
     page_no = 1
     df = pd.DataFrame()
     while True:
+        print(f"Requesting for page {page_no}")
         res = requests.get(
             url="https://opendart.fss.or.kr/api/list.json",
             params={
@@ -36,8 +36,9 @@ def search_reports(
                 "end_de": end_de,
                 "page_count": 100,
                 "page_no": page_no,
-                "pblntf_ty": "A",
-                "last_reprt_at": "Y"
+                # "pblntf_detail_ty": "",  # A001: 사업보고서, A002: 반기보고서, A003: 분기보고서
+                "pblntf_ty": "A",  # A: 정기공시
+                "last_reprt_at": "Y"  # Y: 최종보고서
             }
         )
         body = res.json()

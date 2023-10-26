@@ -26,7 +26,7 @@ def _opendart_url(path: str):
 
 
 @retry(tries=3, delay=1, jitter=10)
-def _request_full_report(
+def request_report(
     corp_code: str,
     bsns_year: int,
     reprt_code: str,
@@ -119,7 +119,7 @@ def _fetch_reports(
             if _mongo_clt.find_one({"args": args}) is not None:
                 continue
 
-            body = _request_full_report(**args)
+            body = request_report(**args)
             doc = {
                 "report": report.to_dict(),
                 "args": args,
