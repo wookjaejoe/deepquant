@@ -11,7 +11,7 @@ from multiprocessing.pool import ThreadPool
 
 _logger = logging.getLogger()
 
-white_accounts = {
+_default_accounts = {
     "11:5000": "자산총계",
     "11:2000": "유동자산",
     "11:1100": "현금및현금성자산",
@@ -28,6 +28,10 @@ white_accounts = {
 
 
 class FsDb:
+
+    def __init__(self, account: dict = None):
+        self.account = account if account is not None else _default_accounts
+
     @property
     def con(self):
         return maria_home("fs")
@@ -45,7 +49,7 @@ class FsDb:
         if not con:
             con = self.con
 
-        acc = ", ".join([f"'{x}'" for x in white_accounts.keys()])
+        acc = ", ".join([f"'{x}'" for x in self.account.keys()])
         query = f"""
         select * from `{code}`
         where concat(report_id, ':', account_id) in ({acc})
@@ -63,7 +67,7 @@ class FsDb:
             if df.empty:
                 return
 
-            df["title"] = df[["report_id", "account_id"]].apply(lambda x: white_accounts[":".join(x)], axis=1)
+            df["title"] = df[["report_id", "account_id"]].apply(lambda x: self.account[":".join(x)], axis=1)
             df = df.pivot_table(
                 index=["date", "type_id", "consolidated"], columns="title", values="value",
                 aggfunc=lambda x: x.iloc[-1]
@@ -78,12 +82,21 @@ class FsDb:
                 forward=["code", "date", "year", "month", "qtr"],
                 drop=["type_id"])]
 
-        with ThreadPool(processes=16) as pool:
-            results = pool.map(transform_one, self.codes)
-            results = [r for r in results if r is not None]
+        db = maria_home("finance")
+        for code in self.codes:
+            print(code)
+            one = transform_one(code)
+            if one is None:
+                continue
 
-        result = pd.concat(results)
-        return result
+            one.to_sql("fs2", db, index=False, if_exists="append")
+
+        # with ThreadPool(processes=4) as pool:
+        #     results = pool.map(transform_one, self.codes)
+        #     results = [r for r in results if r is not None]
+        #
+        # result = pd.concat(results)
+        # return result
 
     def make_table(self, db_name: str = "finance", table_name: str = "fs"):
         self.transform().to_sql(table_name, maria_home(db_name), index=False)
@@ -116,9 +129,9 @@ class FsDb:
             _logger.info(f"{len(df)} rows inserted.")
             con.commit()
 
-    def update_all(self, date_from: date, date_to: date):
+    def update_all(self, codes: list[str], date_from: date, date_to: date):
         num = 0
-        for code in self.codes:
+        for code in codes:
             num += 1
             _logger.info(f"[{num}] {code}")
             for consolidated in [True, False]:
