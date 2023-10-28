@@ -9,6 +9,11 @@ from utils import pdutil
 
 
 def update_chart(fromdate: date):
+    """
+    일봉 차트 데이터 수집
+
+    지수 차트를 기반으로 개별 종목 일봉 차트 수집 날짜를 결정하기 때문에 지수 차트 수집이 선행되어야 함.
+    """
     db = maria_home()
     dates = pd.read_sql("select distinct date from index_chart", maria_home("finance"))["date"]
     dates = [d for d in dates if d >= fromdate]
@@ -19,10 +24,13 @@ def update_chart(fromdate: date):
         df = get_ohlcv_by_date(target_date)
         df = df[[col for col in df.columns if not col.startswith("_")]]
         df = df.set_index(["code", "date"]).sort_index()
-        df.to_sql("chart2", db, if_exists="append", index=True)
+        df.to_sql("chart", db, if_exists="append", index=True)
 
 
 def _create_month_chart_table(table_name: str):
+    """
+    월봉 차트 테이블 생성
+    """
     with MariaConnection() as conn:
         conn.query(
             f"""
@@ -51,21 +59,24 @@ def _create_month_chart_table(table_name: str):
 
 
 def insert_month_chart(table_name: str, year: int, month: int):
+    """
+    일봉 차트 테이블을 기반으로 월봉 차트 삽입
+    """
     with MariaConnection() as conn:
         conn.query(f"""insert into {table_name} (
-        SELECT
-            code,
-            MAX(date)                                                                    as date,
-            cast(SUBSTRING_INDEX(MIN(CONCAT(date, '_', open)), '_', -1) as unsigned)     as open,
-            cast(MAX(high) as unsigned)                                                  as high,
-            cast(MIN(low) as unsigned)                                                   as low,
-            cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', close)), '_', -1) as unsigned)    as close,
-            cast(SUM(vol) as unsigned)                                                   as vol,
-            cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', vol)), '_', -1) as unsigned)      as vol_last,
-            cast(SUM(val) as unsigned)                                                   as val,
-            cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', val)), '_', -1) as unsigned)      as val_last,
-            cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', cap)), '_', -1) as unsigned)      as cap,
-            cast(SUBSTRING_INDEX(MAX(CONCAT(date, '_', shares)), '_', -1) as unsigned)   as shares
+        SELECT code,
+            MAX(date)                                                    as date,
+            SUBSTRING_INDEX(GROUP_CONCAT(open ORDER BY date), ',', 1)    as open,
+            MAX(high)                                                    as high,
+            MIN(low)                                                     as low,
+            SUBSTRING_INDEX(GROUP_CONCAT(close ORDER BY date), ',', -1)  as close,
+            cast(AVG(close) as unsigned)                                 as avg,
+            SUM(vol)                                                     as vol,
+            SUBSTRING_INDEX(GROUP_CONCAT(vol ORDER BY date), ',', -1)    as vol_last,
+            SUM(val)                                                     as val,
+            SUBSTRING_INDEX(GROUP_CONCAT(val ORDER BY date), ',', -1)    as val_last,
+            SUBSTRING_INDEX(GROUP_CONCAT(cap ORDER BY date), ',', -1)    as cap,
+            SUBSTRING_INDEX(GROUP_CONCAT(shares ORDER BY date), ',', -1) as shares
         FROM chart
         where year(date) = {year} and month(date) = {month}
         group by code, year(date), month(date)
@@ -75,6 +86,9 @@ def insert_month_chart(table_name: str, year: int, month: int):
 
 
 def update_index_tickers(fromdate: str = "19600101"):
+    """
+    지수 데이터 수집
+    """
     todate = date.today().strftime('%Y%m%d')
 
     tickers = ["1001", "2001"]
