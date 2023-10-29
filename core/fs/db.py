@@ -7,23 +7,29 @@ from sqlalchemy import text
 from core.ds import GetFinancialStatements
 from core.repository import maria_home
 from utils import pdutil
-from multiprocessing.pool import ThreadPool
 
 _logger = logging.getLogger()
 
 _default_accounts = {
+    # 재무상태표
     "11:5000": "자산총계",
-    "11:2000": "유동자산",
-    "11:1100": "현금및현금성자산",
     "11:8900": "자본총계",
+    "11:2000": "유동자산",
+    "11:1150": "매출채권",
+    "11:1400": "재고자산",
+    "11:5110": "매입채무",
+    "11:6000": "유동부채",
+
+    # 손익계산서
     "12:1000": "매출",
     "12:3000": "매출총이익",
     "12:5000": "영업이익",
     "12:8000": "법인세비용차감전계속영업이익",
     "12:8200": "당기순이익",
     "12:9000": "당기순이익",
+
+    # 현금흐름표
     "16:1000": "영업활동현금흐름",
-    "16:3590": "배당금지급"
 }
 
 
@@ -82,21 +88,17 @@ class FsDb:
                 forward=["code", "date", "year", "month", "qtr"],
                 drop=["type_id"])]
 
-        db = maria_home("finance")
+        results = pd.DataFrame()
+        total = len(self.codes)
+        num = 0
         for code in self.codes:
-            print(code)
-            one = transform_one(code)
-            if one is None:
-                continue
+            num += 1
+            print(f"[{num}/{total}] {code}")
+            result = transform_one(code)
+            if result is not None:
+                results = pd.concat([results, result])
 
-            one.to_sql("fs2", db, index=False, if_exists="append")
-
-        # with ThreadPool(processes=4) as pool:
-        #     results = pool.map(transform_one, self.codes)
-        #     results = [r for r in results if r is not None]
-        #
-        # result = pd.concat(results)
-        # return result
+        return results
 
     def make_table(self, db_name: str = "finance", table_name: str = "fs"):
         self.transform().to_sql(table_name, maria_home(db_name), index=False)

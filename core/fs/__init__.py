@@ -16,7 +16,7 @@ AccAlias = {
     "매출총이익": "GP",  # Gross Profit
     "영업이익": "O",  # Operating Income
     "당기순이익": "E",  # Net Income
-    "배당금지급": "D"
+    "법인세비용차감전계속영업이익": "EBT",
 }
 
 
@@ -96,19 +96,20 @@ class FsLoader:
         bs_cols = ["자산총계", "자본총계"]
         result[[AccAlias[col] for col in bs_cols]] = fins[0][bs_cols]
 
-        result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
-        result["순유동자산"] = fins[0]["유동자산"] - result["부채총계"]
-        result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
-        result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
-        result["배당금지급/Y"] = pd.concat([fins[i]["배당금지급"].rename(i) for i in range(4)], axis=1).sum(axis=1)
-        result["배당금지급/Y"] = result["배당금지급/Y"].fillna(0)
+        # result["비유동자산"] = fins[0]["자산총계"] - fins[0]["유동자산"]
+        # result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
+        result["순운전자본"] = fins[0]["매출채권"] + fins[0]["재고자산"] - fins[0]["매입채무"]
+        # result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
+        # result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
+        result["재고자산순운전자본비율"] = fins[0]["재고자산"] / result["순운전자본"]
+        # result["유동자산순운전자본비율"] = fins[0]["유동자산"] / result["순운전자본"]
+        # result["비유동자산순운전자본비율"] = result["비유동자산"] / result["순운전자본"]
+        # result["유동부채비율"] = fins[0]["유동자산"] / fins[0]["유동부채"]
         result["확정실적"] = yq
 
-        is_cols = ["매출", "매출총이익", "영업이익", "당기순이익"]
+        is_cols = ["매출", "매출총이익", "영업이익", "법인세비용차감전계속영업이익", "당기순이익"]
         for col in is_cols:
             result[f"{AccAlias[col]}/Y"] = pd.concat([fins[i][col].rename(i) for i in range(4)], axis=1).sum(axis=1)
-
-        result["배당성향"] = result["배당금지급/Y"] / result["E/Y"]
 
         for col in is_cols:
             result[f"{AccAlias[col]}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
