@@ -1,5 +1,3 @@
-import numpy as np
-
 from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
 from utils import pdutil
@@ -19,6 +17,18 @@ recipes = {
         "GP/P": 1,
         "EQ/P": 1,
     },
+    "퀄리티": {
+        "GP/EQ": 0.081688,
+        "GP/A": 0.068516,
+        "O/A": 0.059149,
+        "O/R": 0.056152,
+        "O/EQ": 0.054418,
+        "R/EQ": 0.053285,
+        "EBT/A": 0.042171,
+        "EBT/R": 0.035214,
+        "GP/R": 0.034800,
+        "EBT/EQ": 0.034718
+    },
     "성장": {
         "GP/A_QoQ": 0.142706,
         "O/A_QoQ": 0.130182,
@@ -30,13 +40,12 @@ recipes = {
         "GP_QoQ": 0.083276,
         "R/A_QoQ": 0.082624,
         "E/A_QoQ": 0.079270,
-        "R/EQ_QoQ": 0.028347,
-        "R_QoQ": 0.022196,
     },
     "recipe": {
         "P": -1,
         "벨류": 1,
-        "성장": 1
+        "성장": 1,
+        "퀄리티": 1
     }
 }
 
@@ -45,29 +54,23 @@ factors = ["GP/P", "EQ/P", "P"]
 factors += [f"{k}_QoQ" for k in ["R", "GP", "O", "E"]]
 factors += [f"{k}/A_QoQ" for k in ["R", "GP", "O", "E"]]
 factors += [f"{k}/EQ_QoQ" for k in ["R", "GP", "O", "E"]]
-for x1 in ["R", "GP", "O", "E"]:
+for x1 in ["R", "GP", "O", "EBT", "E"]:
     for x2 in ["A", "EQ"]:
         factor = f"{x1}/{x2}"
         factors.append(factor)
         table[factor] = table[f"{x1}/Y"] / table[x2]
 
+for x1 in ["GP", "O", "EBT", "E"]:
+    factor = f"{x1}/R"
+    factors.append(factor)
+    table[factor] = table[f"{x1}/Y"] / table["R/Y"]
+
 for factor in factors:
-    table[f"{factor}_pct"] = table[factor].rank(method="min", pct=True)
-
-
-def weighted(pct: float, w: float):
-    return pct * w if w > 0 else (1 - pct) * abs(w)
-
+    table[f"{factor}_pct"] = table[factor].rank(pct=True)
 
 for name, recipe in recipes.items():
-    # 1. 레시피를 구성하는 개별 팩터 분위(percentile) * 가중치의 총합을 구함
-    sv = sum([weighted(table[f"{k}_pct"], w) for k, w in recipe.items()])
-    # 2. 위의 시리즈에 가중치의 총합을 나눈다 => 0~1 사이 값으로 일반화됨
-    sv = sv / sum([abs(w) for w in recipe.values()])
-
-    table[name] = sv
-    table[f"{name}_rank"] = np.ceil(table[name].rank(ascending=False, method="min"))
-    table[f"{name}_pct"] = table[name].rank(method="min", pct=True)
+    table[name] = sum([table[f"{k}_pct"] * w for k, w in recipe.items()])
+    table[f"{name}_pct"] = table[name].rank(pct=True)
 
 table["tags"] = ""
 
@@ -87,11 +90,11 @@ append_tag(table["O/EQ_pct"] < 0.10, "저 O/EQ")
 append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
-table = table.sort_values("recipe_rank")
+table = table.sort_values("recipe_pct", ascending=False)
 table[
     pdutil.sort_columns(
         table.columns,
-        ["recipe_rank", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "tags"]
+        ["recipe_pct", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "퀄리티_pct", "tags"]
     )
 ].to_csv("pick.csv")
 print("Done.")
