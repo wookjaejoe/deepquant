@@ -65,6 +65,8 @@ for x1 in ["GP", "O", "EBT", "E"]:
     factors.append(factor)
     table[factor] = table[f"{x1}/Y"] / table["R/Y"]
 
+table = table[table["확정실적"].notna() & table["확정실적"].notnull()]
+
 for factor in factors:
     table[f"{factor}_pct"] = table[factor].rank(pct=True)
 
