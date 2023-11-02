@@ -98,10 +98,10 @@ class FsLoader:
 
         # result["비유동자산"] = fins[0]["자산총계"] - fins[0]["유동자산"]
         # result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
-        result["순운전자본"] = fins[0]["매출채권"] + fins[0]["재고자산"] - fins[0]["매입채무"]
+        # result["순운전자본"] = fins[0]["매출채권"] + fins[0]["재고자산"] - fins[0]["매입채무"]
         # result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
         # result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
-        result["재고자산순운전자본비율"] = fins[0]["재고자산"] / result["순운전자본"]
+        # result["재고자산순운전자본비율"] = fins[0]["재고자산"] / result["순운전자본"]
         # result["유동자산순운전자본비율"] = fins[0]["유동자산"] / result["순운전자본"]
         # result["비유동자산순운전자본비율"] = result["비유동자산"] / result["순운전자본"]
         # result["유동부채비율"] = fins[0]["유동자산"] / fins[0]["유동부채"]
