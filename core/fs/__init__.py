@@ -75,24 +75,36 @@ class FsLoader:
         ]
         self.table.sort_values("settle_date", ascending=False, inplace=True)
 
-    def load(self, year: int, qtr: int):
+    def load(self, year: int, qtr: int, consolidated: int = None):
+        """
+        :param year: 조회 년도
+        :param qtr: 조회 분기
+        :param consolidated: 연결/별도 - None 인 경우 주 연결 재무제표 우선
+        """
+
         assert qtr in [1, 2, 3, 4]
         yq = YearQtr(year, qtr)
-        # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [5]: 5분기 전 데이터
+
+        # [0]: 조회한 분기 데이터, [1]: 직전 분기 데이터, ... [4]: 4분기 전 데이터
         fins = [pdutil.find(self.table, year=yq.minus(i).year, qtr=yq.minus(i).qtr) for i in range(5)]
-        selector = pd.MultiIndex.from_frame(
-            fins[0].groupby(["code"]).apply(select_consolidation).to_frame().reset_index())
+
+        # 연결/별도 결정
+        if consolidated is None:
+            indexer = fins[0].groupby(["code"]).apply(select_consolidation)
+        else:
+            indexer = fins[0].groupby(["code"]).apply(lambda x: consolidated)
+
+        indexer = pd.MultiIndex.from_frame(indexer.to_frame("consolidated").reset_index())
         fins = [fin.set_index(["code", "consolidated"]) for fin in fins]
-        fins = [fin[fin.index.isin(selector)].reset_index(level=1) for fin in fins]
+        fins = [fin[fin.index.isin(indexer)].reset_index(level=1) for fin in fins]
 
-        whitelist = set(fins[0].index)
-        for fin in fins:
-            codes = set(fin.index)
-            whitelist = whitelist.intersection(codes)
+        common_indices = set(fins[0].index)
+        for fin in fins[1:]:
+            common_indices = common_indices.intersection(set(fin.index))
 
-        fins = [fin[fin.index.isin(whitelist)] for fin in fins]
+        fins = [fin.loc[list(common_indices)] for fin in fins]
 
-        result = pd.DataFrame()
+        result = pd.DataFrame(indexer.tolist(), columns=indexer.names).set_index("code")
         bs_cols = ["자산총계", "자본총계"]
         result[[AccAlias[col] for col in bs_cols]] = fins[0][bs_cols]
 
