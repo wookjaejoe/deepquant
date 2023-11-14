@@ -68,6 +68,7 @@ def fetch_all():
     result = pd.DataFrame()
 
     for cat in cats:
+        print(cat)
         res = requests.get(
             "https://opendart.fss.or.kr/api/xbrlTaxonomy.json",
             params={

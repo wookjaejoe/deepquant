@@ -15,7 +15,8 @@ def search_reports(
     bgn_de: str = "19980101",
     end_de: str = None,
     stock_code: str = None,
-    corp_code: str = None
+    corp_code: str = None,
+    pblntf_detail_ty: str = None,  # A001: 사업보고서, A002: 반기보고서, A003: 분기보고서
 ) -> pd.DataFrame:
     """
     공시 검색
@@ -36,8 +37,8 @@ def search_reports(
                 "end_de": end_de,
                 "page_count": 100,
                 "page_no": page_no,
-                # "pblntf_detail_ty": "",  # A001: 사업보고서, A002: 반기보고서, A003: 분기보고서
-                "pblntf_ty": "A",  # A: 정기공시
+                "pblntf_detail_ty": pblntf_detail_ty,
+                "pblntf_ty": "A" if pblntf_detail_ty is None else None,  # A: 정기공시
                 "last_reprt_at": "Y"  # Y: 최종보고서
             }
         )

@@ -4,7 +4,7 @@ from utils import pdutil
 
 fin_loader = FsLoader()
 table = get_ohlcv_latest().set_index("code")
-table = table.join(fin_loader.load(2023, 2))
+table = table.join(fin_loader.load(2023, 3))
 table = table.rename(columns={
     "cap": "P",
 })
@@ -32,9 +32,11 @@ recipes = {
     "성장": {
         "GP/A_QoQ": 0.142706,
         "O/A_QoQ": 0.130182,
-        "GP/EQ_QoQ": 0.129825,
-        "O/EQ_QoQ": 0.118514,
-        "E/EQ_QoQ": 0.111300,
+
+        # "GP/EQ_QoQ": 0.129825,
+        # "O/EQ_QoQ": 0.118514,
+        # "E/EQ_QoQ": 0.111300,
+
         "O_QoQ": 0.098340,
         "E_QoQ": 0.097314,
         "GP_QoQ": 0.083276,

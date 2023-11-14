@@ -13,14 +13,3 @@ error_codes = {
     "900": "정의되지 않은 오류가 발생하였습니다.",
     "901": "사용자 계정의 개인정보 보유기간이 만료되어 사용할 수 없는 키입니다. 관리자 이메일(opendart@fss.or.kr)로 문의하시기 바랍니다."
 }
-
-
-def check_error(status: str):
-    if status == "000":
-        return
-
-    # todo: WIP
-
-
-class NoData(Exception):
-    pass
