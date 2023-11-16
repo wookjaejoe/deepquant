@@ -15,38 +15,58 @@ table["R/P"] = table["R/Y"] / table["P"]
 
 recipes = {
     "벨류": {
-        "GP/P": 1,
-        "EQ/P": 1,
+        "GP/P": 0.120550,
+        "EQ/P": 0.105678,
     },
     "퀄리티": {
-        "GP/EQ": 0.081688,
-        "GP/A": 0.068516,
-        "O/A": 0.059149,
-        "O/R": 0.056152,
-        "O/EQ": 0.054418,
-        "R/EQ": 0.053285,
-        "EBT/A": 0.042171,
-        "EBT/R": 0.035214,
-        "GP/R": 0.034800,
-        "EBT/EQ": 0.034718
+        "GP/A": 0.032862,
+        "GP/EQ": 0.028487,
+        "R/A": 0.012971,
+        "GP/R": 0.012141,
+        "O/A": 0.009835,
+        "E/R": 0.005616,
+        "EBT/A": 0.005415,
+        "O/EQ": 0.005188,
+        "O/R": 0.004577,
+        "R/EQ": 0.004484,
+        "EBT/R": 0.003881,
+        "E/A": 0.003815,
+        "EBT/EQ": 0.003162,
+        "E/EQ": 0.002940
     },
     "성장": {
-        "GP/A_QoQ": 0.142706,
-        "O/A_QoQ": 0.130182,
-        "GP/EQ_QoQ": 0.129825,
-        "O/EQ_QoQ": 0.118514,
-        "E/EQ_QoQ": 0.111300,
-        "O_QoQ": 0.098340,
-        "E_QoQ": 0.097314,
-        "GP_QoQ": 0.083276,
-        "R/A_QoQ": 0.082624,
-        "E/A_QoQ": 0.079270,
+        "O_QoQ": 0.027,
+        "E_QoQ": 0.024,
+        "EBT_QoQ": 0.017,
+        "O/A_QoQ": 0.013,
+        "E/EQ_QoQ": 0.011,
+        "O/EQ_QoQ": 0.01,
+        "E/A_QoQ": 0.009,
+        "EBT/A_QoQ": 0.008,
+        "EBT/EQ_QoQ": 0.006,
+        "GP/EQ_QoQ": 0.004,
+        "GP/A_QoQ": 0.004,
+        "GP_QoQ": 0.003,
+        "R_QoQ": 0.001,
+        "R/EQ_QoQ": 0.001,
+        "R/A_QoQ": 0.001,
     },
-    "전략": {
-        "P": -1,
+    "가격": {
+        "P": -1
+    },
+    "전략1": {
+        "가격": 1,
         "벨류": 1,
         "성장": 1,
-        "퀄리티": 0.5
+    },
+    "전략2": {
+        "가격": 0.228105,
+        "성장": 0.137950,
+        "벨류": 0.137598,
+    },
+    "전략": {
+        "전략1": 1,
+        "전략2": 1
     }
 }
 
@@ -83,21 +103,17 @@ def append_tag(selector, f: str):
 
 
 append_tag(table["open"] == 0, "거래정지")
-append_tag(table["R/A_pct"] < 0.10, "저 R/A")
-append_tag(table["GP/A_pct"] < 0.10, "저 GP/A")
-append_tag(table["O/A_pct"] < 0.10, "저 O/A")
-append_tag(table["E/A_pct"] < 0.10, "저 E/A")
-append_tag(table["GP/EQ_pct"] < 0.10, "저 R/EQ")
-append_tag(table["GP/EQ_pct"] < 0.10, "저 GP/EQ")
-append_tag(table["O/EQ_pct"] < 0.10, "저 O/EQ")
-append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
-append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
+
+for quanlity_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
+                        "EBT/EQ", "E/EQ", "퀄리티"]:
+    append_tag(table[f"{quanlity_factor}_pct"] < 0.10, f"저 {quanlity_factor}")
 
 table = table.sort_values("전략_pct", ascending=False)
 table[
     pdutil.sort_columns(
         table.columns,
-        ["전략_pct", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "퀄리티_pct", "tags"]
+        ["전략_pct", "name", "close", "전략1_pct", "전략2_pct", "P_pct", "벨류_pct", "성장_pct", "퀄리티_pct",
+         "tags"]
     )
 ].to_csv("pick.csv")
 print("Done.")

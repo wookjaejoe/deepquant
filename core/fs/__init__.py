@@ -108,27 +108,27 @@ class FsLoader:
         bs_cols = ["자산총계", "자본총계"]
         result[[AccAlias[col] for col in bs_cols]] = fins[0][bs_cols]
 
-        # result["비유동자산"] = fins[0]["자산총계"] - fins[0]["유동자산"]
-        # result["부채총계"] = fins[0]["자산총계"] - fins[0]["자본총계"]
-        # result["순운전자본"] = fins[0]["매출채권"] + fins[0]["재고자산"] - fins[0]["매입채무"]
-        # result["부채비율"] = result["부채총계"] / fins[0]["자본총계"]
-        # result["자기자본비율"] = fins[0]["자본총계"] / fins[0]["자산총계"]
-        # result["재고자산순운전자본비율"] = fins[0]["재고자산"] / result["순운전자본"]
-        # result["유동자산순운전자본비율"] = fins[0]["유동자산"] / result["순운전자본"]
-        # result["비유동자산순운전자본비율"] = result["비유동자산"] / result["순운전자본"]
-        # result["유동부채비율"] = fins[0]["유동자산"] / fins[0]["유동부채"]
         result["확정실적"] = yq
 
         is_cols = ["매출", "매출총이익", "영업이익", "법인세비용차감전계속영업이익", "당기순이익"]
-        for col in is_cols:
-            result[f"{AccAlias[col]}/Y"] = pd.concat([fins[i][col].rename(i) for i in range(4)], axis=1).sum(axis=1)
-
-        for col in is_cols:
-            result[f"{AccAlias[col]}_QoQ"] = Growth.rate(fins[0][col], fins[4][col])
 
         for is_col in is_cols:
-            for bs_col in bs_cols:
-                name = f"{AccAlias[is_col]}/{AccAlias[bs_col]}_QoQ"
-                result[name] = fins[0][is_col] / fins[0][bs_col] - fins[4][is_col] / fins[4][bs_col]
+            col_acc = AccAlias[is_col]
+
+            # 4분기 누적 이익
+            result[f"{AccAlias[is_col]}/Y"] = pd.concat([fins[i][is_col].rename(i) for i in range(4)], axis=1).sum(axis=1)
+
+            # 매출 이익율
+            if col_acc != "R":
+                result[f"{col_acc}/R"] = result[f"{col_acc}/Y"] / result["R/Y"]
+
+            # 자본, 자산 이익률
+            result[f"{col_acc}/EQ"] = result[f"{col_acc}/Y"] / fins[1]["자본총계"]
+            result[f"{col_acc}/A"] = result[f"{col_acc}/Y"] / fins[1]["자산총계"]
+
+            # 이익 QoQ
+            result[f"{AccAlias[is_col]}_QoQ"] = Growth.rate(fins[0][is_col], fins[4][is_col])
+            result[f"{AccAlias[is_col]}/EQ_QoQ"] = fins[0][is_col] / result["EQ"] - fins[4][is_col] / result["EQ"]
+            result[f"{AccAlias[is_col]}/A_QoQ"] = fins[0][is_col] / result["A"] - fins[4][is_col] / result["A"]
 
         return result

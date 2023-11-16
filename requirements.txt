@@ -30,3 +30,5 @@ httpx
 starlette
 datetime
 tenacity
+sklearn
+scikit-learn
