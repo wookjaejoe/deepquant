@@ -11,6 +11,7 @@ table = table.rename(columns={
 
 table["GP/P"] = table["GP/Y"] / table["P"]
 table["EQ/P"] = table["EQ"] / table["P"]
+table["R/P"] = table["R/Y"] / table["P"]
 
 recipes = {
     "벨류": {
@@ -32,18 +33,16 @@ recipes = {
     "성장": {
         "GP/A_QoQ": 0.142706,
         "O/A_QoQ": 0.130182,
-
-        # "GP/EQ_QoQ": 0.129825,
-        # "O/EQ_QoQ": 0.118514,
-        # "E/EQ_QoQ": 0.111300,
-
+        "GP/EQ_QoQ": 0.129825,
+        "O/EQ_QoQ": 0.118514,
+        "E/EQ_QoQ": 0.111300,
         "O_QoQ": 0.098340,
         "E_QoQ": 0.097314,
         "GP_QoQ": 0.083276,
         "R/A_QoQ": 0.082624,
         "E/A_QoQ": 0.079270,
     },
-    "recipe": {
+    "전략": {
         "P": -1,
         "벨류": 1,
         "성장": 1,
@@ -52,10 +51,10 @@ recipes = {
 }
 
 # 개별 팩터들의 pct 계산
-factors = ["GP/P", "EQ/P", "P"]
-factors += [f"{k}_QoQ" for k in ["R", "GP", "O", "E"]]
-factors += [f"{k}/A_QoQ" for k in ["R", "GP", "O", "E"]]
-factors += [f"{k}/EQ_QoQ" for k in ["R", "GP", "O", "E"]]
+factors = ["GP/P", "EQ/P", "R/P", "P"]
+factors += [f"{k}_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]
+factors += [f"{k}/A_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]
+factors += [f"{k}/EQ_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]
 for x1 in ["R", "GP", "O", "EBT", "E"]:
     for x2 in ["A", "EQ"]:
         factor = f"{x1}/{x2}"
@@ -94,11 +93,11 @@ append_tag(table["O/EQ_pct"] < 0.10, "저 O/EQ")
 append_tag(table["E/EQ_pct"] < 0.10, "저 E/EQ")
 append_tag(table["name"].str.contains("홀딩스"), "홀딩스")
 
-table = table.sort_values("recipe_pct", ascending=False)
+table = table.sort_values("전략_pct", ascending=False)
 table[
     pdutil.sort_columns(
         table.columns,
-        ["recipe_pct", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "퀄리티_pct", "tags"]
+        ["전략_pct", "name", "open", "close", "P_pct", "벨류_pct", "성장_pct", "퀄리티_pct", "tags"]
     )
 ].to_csv("pick.csv")
 print("Done.")
