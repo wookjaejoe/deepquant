@@ -8,7 +8,7 @@ from core.repository.maria.conn import MariaConnection, maria_home
 from utils import pdutil
 
 
-def update_index_tickers(fromdate: str = "19600101"):
+def update_index_chart(fromdate: str = "19600101"):
     """
     지수 데이터 수집
     """
