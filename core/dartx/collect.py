@@ -107,6 +107,11 @@ def apply_to_fs(
     fs_day: int,
     fs_qtr: int
 ):
+    """
+    수집한 보고서 내용을 fs 테이블에 반영
+
+    fs 테이블에 동일 년월 데이터가 이미 존재하면 skip
+    """
     columns = "fs_div, stock_code, sj_div, account_id, thstrm_amount"
     account_ids = ", ".join([f"'{key}'" for key in accounts.keys()])
     table_name = f"fs_{fs_year}_{fs_qtr}Q"

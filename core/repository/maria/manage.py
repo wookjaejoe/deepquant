@@ -8,6 +8,27 @@ from core.repository.maria.conn import MariaConnection, maria_home
 from utils import pdutil
 
 
+def update_index_tickers(fromdate: str = "19600101"):
+    """
+    지수 데이터 수집
+    """
+    todate = date.today().strftime('%Y%m%d')
+
+    tickers = ["1001", "2001"]
+    for ticker in tickers:
+        db = maria_home("finance")
+        df = pykrx.stock.get_index_ohlcv(
+            fromdate=fromdate,
+            todate=todate,
+            ticker=ticker
+        )
+        df["ticker"] = ticker
+        df["date"] = df.index
+        df["date"] = df["date"].dt.date
+        df = df[pdutil.sort_columns(df.columns, ["ticker", "date"])]
+        df.to_sql("index_chart", db, index=False, if_exists="append")
+
+
 def update_chart(fromdate: date):
     """
     일봉 차트 데이터 수집
@@ -70,7 +91,7 @@ def insert_month_chart(table_name: str, year: int, month: int):
             MAX(high)                                                    as high,
             MIN(low)                                                     as low,
             SUBSTRING_INDEX(GROUP_CONCAT(close ORDER BY date), ',', -1)  as close,
-            cast(AVG(close) as unsigned)                                 as avg,
+            IFNULL(cast(SUM(val) / NULLIF(SUM(vol), 0) as unsigned), 0)  as avg,
             SUM(vol)                                                     as vol,
             SUBSTRING_INDEX(GROUP_CONCAT(vol ORDER BY date), ',', -1)    as vol_last,
             SUM(val)                                                     as val,
@@ -83,24 +104,3 @@ def insert_month_chart(table_name: str, year: int, month: int):
         order by date);
         """)
         conn.commit()
-
-
-def update_index_tickers(fromdate: str = "19600101"):
-    """
-    지수 데이터 수집
-    """
-    todate = date.today().strftime('%Y%m%d')
-
-    tickers = ["1001", "2001"]
-    for ticker in tickers:
-        db = maria_home("finance")
-        df = pykrx.stock.get_index_ohlcv(
-            fromdate=fromdate,
-            todate=todate,
-            ticker=ticker
-        )
-        df["ticker"] = ticker
-        df["date"] = df.index
-        df["date"] = df["date"].dt.date
-        df = df[pdutil.sort_columns(df.columns, ["ticker", "date"])]
-        df.to_sql("index_chart", db, index=False, if_exists="append")

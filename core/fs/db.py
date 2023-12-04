@@ -7,6 +7,7 @@ from sqlalchemy import text
 from core.ds import GetFinancialStatements
 from core.repository import maria_home
 from utils import pdutil
+from typing import *
 
 _logger = logging.getLogger()
 
@@ -58,6 +59,12 @@ class FsDb:
         where concat(report_id, ':', account_id) in ({acc})
         """
         return pd.read_sql(query, con)
+
+    def distinct_dates(self, code: str):
+        """
+        :param code: 종목코드 6자리 문자열
+        """
+        return pd.read_sql(f"select distinct date from `{code}`", self.con)
 
     def transform(self):
         """
@@ -128,11 +135,32 @@ class FsDb:
             _logger.info(f"{len(df)} rows inserted.")
             con.commit()
 
-    def update_all(self, codes: list[str], date_from: date, date_to: date):
+    def update_all(
+        self,
+        codes: list[str],
+        date_from: date,
+        date_to: date,
+        should_update: Callable[[str], bool] = lambda code: True
+    ):
+        """
+        사용 예시)
+        db.update_all(
+            codes=stocks["stock_code"].tolist(),
+            date_from=date(2023, 1, 1),
+            date_to=date.today(),
+            should_update=lambda code: (2023, 9) not in [(dt.year, dt.month) for dt in db.distinct_dates(code)["date"]]
+        )
+        """
+
+
         num = 0
         for code in codes:
             num += 1
-            _logger.info(f"[{num}] {code}")
+            _logger.info(f"[{num}/{len(codes)}] {code}")
+            if not should_update(code):
+                _logger.info(f"Skipping...")
+                continue
+
             for consolidated in [True, False]:
                 try:
                     df = GetFinancialStatements.call_api(

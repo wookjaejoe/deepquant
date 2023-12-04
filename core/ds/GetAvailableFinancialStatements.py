@@ -8,6 +8,7 @@ from retry import retry
 from config import config
 from core.repository import get_stocks
 from datetime import date
+import base64
 
 _client = MongoClient(config["mongo"]["url"])
 _col = _client["ds"]["GetAvailableFinancialStatements"]
@@ -20,13 +21,15 @@ auth = config["deepSearchAuth"]
 @retry(tries=3, delay=1, jitter=3)
 def call_api(code: str) -> dict:
     assert len(code) == 6
+    _input = f"GetAvailableFinancialStatements(KRX:{code}, date_from=1990-01-01, date_to={date.today()})"
+    _input = base64.b64encode(_input.encode("utf8")).decode("utf8")
     res = requests.get(
-        "https://api.deepsearch.com/v1/compute",
-        params={
-            "input": f"GetAvailableFinancialStatements(KRX:{code}, date_from=1990-01-01, date_to={date.today()})"
-        },
+        "https://www.deepsearch.com/api/app/v1/compute",
+        data="{\"input\":" + f"\"{_input}\"" + "}",
         headers={
-            "Authorization": auth
+            "authorization": "Basic 7c8z7pIPU9pBtHHphMdRoA==",
+            "content-type": "application/json",
+            "x-deepsearch-encoded-input": "true",
         }
     )
     assert res.status_code == 200, f"Status code: {res.status_code}"

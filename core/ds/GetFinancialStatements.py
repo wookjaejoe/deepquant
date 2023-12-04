@@ -44,7 +44,7 @@ def _call_api(
         "https://www.deepsearch.com/api/app/v1/compute",
         data="{\"input\":" + f"\"{_input}\"" + "}",
         headers={
-            "authorization": "Basic xXfJw5XqwjOzpCbM9eXSPg==",
+            "authorization": "Basic 7c8z7pIPU9pBtHHphMdRoA==",
             "content-type": "application/json",
             "x-deepsearch-encoded-input": "true",
         }
