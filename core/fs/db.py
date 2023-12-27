@@ -42,8 +42,7 @@ class FsDb:
 
     @property
     def codes(self):
-        with self.con.connect() as con:
-            return [row[0] for row in con.execute(text("show tables"))]
+        return pd.read_sql("show tables", self.con).iloc[:, 0].to_list()
 
     def table(self, code: str, con=None):
         """
@@ -125,12 +124,16 @@ class FsDb:
         consolidated = int(consolidated[0])
 
         with self.con.connect() as con:
-            query = f"""
-            delete from `{code}`
-            where consolidated = {consolidated} and date in ({date_in}) 
-            """
-            result = con.execute(text(query))
-            _logger.info(f"{result.rowcount} rows deleted.")
+            # todo: check table exists
+
+            if code in self.codes:
+                query = f"""
+                delete from `{code}`
+                where consolidated = {consolidated} and date in ({date_in}) 
+                """
+                result = con.execute(text(query))
+                _logger.info(f"{result.rowcount} rows deleted.")
+
             df.to_sql(code, con, if_exists="append", index=False)
             _logger.info(f"{len(df)} rows inserted.")
             con.commit()
@@ -151,7 +154,6 @@ class FsDb:
             should_update=lambda code: (2023, 9) not in [(dt.year, dt.month) for dt in db.distinct_dates(code)["date"]]
         )
         """
-
 
         num = 0
         for code in codes:

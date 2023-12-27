@@ -40,11 +40,11 @@ def _call_api(
     )
     """
     _input = base64.b64encode(_input.encode("utf8")).decode("utf8")
-    response = requests.get(
+    response = requests.post(
         "https://www.deepsearch.com/api/app/v1/compute",
         data="{\"input\":" + f"\"{_input}\"" + "}",
         headers={
-            "authorization": "Basic 7c8z7pIPU9pBtHHphMdRoA==",
+            "authorization": "Basic HIaKSeoAopI/iYenOmIJ+Q==",
             "content-type": "application/json",
             "x-deepsearch-encoded-input": "true",
         }
