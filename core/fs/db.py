@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from typing import Callable
 
 import pandas as pd
 from sqlalchemy import text
@@ -7,7 +8,6 @@ from sqlalchemy import text
 from core.ds import GetFinancialStatements
 from core.repository import maria_home
 from utils import pdutil
-from typing import *
 
 _logger = logging.getLogger()
 
@@ -44,7 +44,7 @@ class FsDb:
     def codes(self):
         return pd.read_sql("show tables", self.con).iloc[:, 0].to_list()
 
-    def table(self, code: str, con=None):
+    def table(self, code: str, con=None) -> pd.DataFrame:
         """
         :param code: 종목코드 6자리 문자열
         :param con: 커넥션 객체, 미 입력시 새로 연결
@@ -65,16 +65,21 @@ class FsDb:
         """
         return pd.read_sql(f"select distinct date from `{code}`", self.con)
 
-    def transform(self):
+    def pivot(self):
         """
-        두번째 형식으로 변형
+        싱글 테이블로 변환
         """
         con = self.con
+        results = pd.DataFrame()
+        total = len(self.codes)
+        num = 0
+        for code in self.codes:
+            num += 1
+            print(f"[{num}/{total}] {code}")
 
-        def transform_one(code: str):
             df = self.table(code, con)
             if df.empty:
-                return
+                continue
 
             df["title"] = df[["report_id", "account_id"]].apply(lambda x: self.account[":".join(x)], axis=1)
             df = df.pivot_table(
@@ -86,25 +91,44 @@ class FsDb:
             df["month"] = df["date"].apply(lambda x: x.month)
             df["qtr"] = df["type_id"].replace({["F", "B", "T", "K"][q - 1]: q for q in [1, 2, 3, 4]})
             df["code"] = code
-            return df[pdutil.sort_columns(
+            result = df[pdutil.sort_columns(
                 df.columns,
                 forward=["code", "date", "year", "month", "qtr"],
                 drop=["type_id"])]
 
-        results = pd.DataFrame()
-        total = len(self.codes)
-        num = 0
-        for code in self.codes:
-            num += 1
-            print(f"[{num}/{total}] {code}")
-            result = transform_one(code)
             if result is not None:
                 results = pd.concat([results, result])
 
         return results
 
     def make_table(self, db_name: str = "finance", table_name: str = "fs"):
-        self.transform().to_sql(table_name, maria_home(db_name), index=False)
+        db = maria_home(db_name)
+        with db.connect() as con:
+            f"""
+            create table {table_name} 
+            (
+                code           varchar(6) not null,
+                date           date       null,
+                year           int        not null,
+                month          tinyint    not null,
+                qtr            tinyint    not null,
+                consolidated   tinyint    not null,
+                매출             bigint     null,
+                매출총이익          bigint     null,
+                영업이익           bigint     null,
+                법인세비용차감전계속영업이익 bigint     null,
+                당기순이익          bigint     null,
+                자산총계           bigint     null,
+                자본총계           bigint     null,
+                유동부채           bigint     null,
+                유동자산           bigint     null,
+                영업활동현금흐름       bigint     null,
+                primary key (code, year, qtr, month, consolidated)
+            );
+            """
+            con.commit()
+
+        self.pivot().to_sql(table_name, db, index=False, if_exists="append")
 
     def reports(self, code: str):
         query = f"""
@@ -154,7 +178,6 @@ class FsDb:
             should_update=lambda code: (2023, 9) not in [(dt.year, dt.month) for dt in db.distinct_dates(code)["date"]]
         )
         """
-
         num = 0
         for code in codes:
             num += 1

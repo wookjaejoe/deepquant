@@ -132,4 +132,9 @@ def apply_to_fs(
     df["qtr"] = fs_qtr
     df["consolidated"] = df["consolidated"].replace({"CFS": 1, "OFS": 0})
     df = df[pdutil.sort_columns(df.columns, forward=["code", "date", "year", "month", "qtr", "consolidated"])]
-    df.to_sql("fs", db, if_exists="append", index=False)
+
+    # DB에 병합
+    old_data = pd.read_sql(f"select * from fs where year(date) = {fs_year} and qtr = {fs_qtr}", db)
+    exists = old_data[["code", "consolidated"]].apply(tuple, axis=1)
+    new_data = df[~df[["code", "consolidated"]].apply(tuple, axis=1).isin(exists)]
+    new_data.to_sql("fs", db, if_exists="append", index=False)

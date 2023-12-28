@@ -23,7 +23,6 @@ jupyter
 pykrx
 xmltodict
 beautifulsoup4
-python
 levenshtein
 
 httpx
@@ -32,3 +31,5 @@ datetime
 tenacity
 sklearn
 scikit-learn
+
+tenacity
