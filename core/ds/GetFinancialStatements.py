@@ -8,6 +8,7 @@ from typing import *
 import pandas as pd
 import requests
 from retry import retry
+from config import config
 
 _logger = logging.getLogger()
 
@@ -44,7 +45,7 @@ def _call_api(
         "https://www.deepsearch.com/api/app/v1/compute",
         data="{\"input\":" + f"\"{_input}\"" + "}",
         headers={
-            "authorization": "Basic HIaKSeoAopI/iYenOmIJ+Q==",
+            "authorization": config["deepSearchAuth"],
             "content-type": "application/json",
             "x-deepsearch-encoded-input": "true",
         }

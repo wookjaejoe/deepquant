@@ -9,9 +9,11 @@ table = table.rename(columns={
     "cap": "P",
 })
 
-table["GP/P"] = table["GP/Y"] / table["P"]
 table["EQ/P"] = table["EQ"] / table["P"]
 table["R/P"] = table["R/Y"] / table["P"]
+table["GP/P"] = table["GP/Y"] / table["P"]
+table["O/P"] = table["O/Y"] / table["P"]
+table["E/P"] = table["E/Y"] / table["P"]
 
 recipes = {
     "벨류": {
@@ -54,36 +56,15 @@ recipes = {
     "가격": {
         "P": -1
     },
-    "벨류전략": {
-        "벨류": 1,
-        "가격": 1
-    },
-    "성장전략": {
-        "성장": 1,
-        "가격": 1
-    },
-    "퀄리티전략": {
-        "퀄리티": 1,
-        "가격": 1
-    },
-    "구전략": {
-        "벨류": 1,
-        "성장": 1,
-        "가격": 1
-    },
-    "신전략": {
-        "벨류전략": 1,
-        "성장전략": 1,
-        "퀄리티전략": 1
-    },
     "전략": {
-        "구전략": 1,
-        "신전략": 1
+        "벨류": 1,
+        "성장": 1,
+        "가격": 1
     }
 }
 
 # 개별 팩터들의 pct 계산
-factors = ["GP/P", "EQ/P", "R/P", "P"]
+factors = ["GP/P", "O/P", "E/P", "EQ/P", "P"]
 factors += [f"{k}_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]
 factors += [f"{k}/A_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]
 factors += [f"{k}/EQ_QoQ" for k in ["R", "GP", "O", "EBT", "E"]]

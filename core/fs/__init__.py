@@ -109,6 +109,8 @@ class FsLoader:
         result[[AccAlias[col] for col in bs_cols]] = fins[0][bs_cols]
 
         result["확정실적"] = yq
+        result["유동부채"] = fins[0]["유동부채"]
+        result["유동자산"] = fins[0]["유동자산"]
 
         is_cols = ["매출", "매출총이익", "영업이익", "법인세비용차감전계속영업이익", "당기순이익"]
 

@@ -1,3 +1,18 @@
+"""
+사용 예시)
+
+from datetime import date
+from core.repository.maria.manage import *
+
+fromdate = date(2023, 11, 1)
+
+clear(fromdate)
+update_index_chart(fromdate)
+update_chart(fromdate)
+insert_month_chart(2023, 11)
+insert_month_chart(2023, 12)
+"""
+
 from datetime import date
 
 import pandas as pd
@@ -8,7 +23,20 @@ from core.repository.maria.conn import MariaConnection, maria_home
 from utils import pdutil
 
 
-def update_index_chart(fromdate: str = "19600101"):
+def clear(fromdate: date):
+    """
+    지수, 일봉, 월봉 차트 데이터 삭제
+    """
+
+    print(f"Clearing index_chart, chart, month_chart where date >= {fromdate}")
+    with MariaConnection() as conn:
+        conn.query(f"delete from index_chart where date >= '{fromdate}';")
+        conn.query(f"delete from chart where date >= '{fromdate}';")
+        conn.query(f"delete from month_chart where date >= '{fromdate}';")
+        conn.commit()
+
+
+def update_index_chart(fromdate: date):
     """
     지수 데이터 수집
     """
@@ -18,7 +46,7 @@ def update_index_chart(fromdate: str = "19600101"):
     for ticker in tickers:
         db = maria_home("finance")
         df = pykrx.stock.get_index_ohlcv(
-            fromdate=fromdate,
+            fromdate=fromdate.strftime('%Y%m%d'),
             todate=todate,
             ticker=ticker
         )
@@ -26,6 +54,8 @@ def update_index_chart(fromdate: str = "19600101"):
         df["date"] = df.index
         df["date"] = df["date"].dt.date
         df = df[pdutil.sort_columns(df.columns, ["ticker", "date"])]
+
+        print(f"Inserting into index_chart {ticker, fromdate, todate}")
         df.to_sql("index_chart", db, index=False, if_exists="append")
 
 
@@ -79,14 +109,16 @@ def _create_month_chart_table(table_name: str):
         conn.commit()
 
 
-def insert_month_chart(table_name: str, year: int, month: int):
+def insert_month_chart(year: int, month: int):
     """
     일봉 차트 테이블을 기반으로 월봉 차트 삽입
     """
+    print(f"Inserting into month_chart {year}/{month}")
     with MariaConnection() as conn:
-        conn.query(f"""insert into {table_name} (
+        conn.query(f"""insert into month_chart (
         SELECT code,
             MAX(date)                                                    as date,
+            SUBSTRING_INDEX(GROUP_CONCAT(name ORDER BY date), ',', -1)   as name,
             SUBSTRING_INDEX(GROUP_CONCAT(open ORDER BY date), ',', 1)    as open,
             MAX(high)                                                    as high,
             MIN(low)                                                     as low,

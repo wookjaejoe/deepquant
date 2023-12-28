@@ -2,6 +2,7 @@ from datetime import date
 from typing import *
 
 import pandas as pd
+import numpy as np
 
 
 def cagr(initial: float, last: float, years: float):
@@ -32,6 +33,8 @@ def mdd(dates: List[date], values: List[float]):
 
 
 def fit(values: Any, scale: Tuple):
+    # replace inf to max not inf
     values = pd.Series(values)
+    values[values == np.inf] = values[values != np.inf].max()
     norm = (values - values.min()) / (values.max() - values.min())
     return scale[0] + norm * (scale[1] - scale[0])

@@ -27,7 +27,7 @@ def call_api(code: str) -> dict:
         "https://www.deepsearch.com/api/app/v1/compute",
         data="{\"input\":" + f"\"{_input}\"" + "}",
         headers={
-            "authorization": "Basic 7c8z7pIPU9pBtHHphMdRoA==",
+            "authorization": config["deepSearchAuth"],
             "content-type": "application/json",
             "x-deepsearch-encoded-input": "true",
         }
