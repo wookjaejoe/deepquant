@@ -14,7 +14,7 @@ def display(value):
 
 def stat(code: str):
     df = pd.read_csv("pick.csv", dtype={"code": str})
-    stock = df[df["code"] == "044180"].iloc[0]
+    stock = df[df["code"] == code].iloc[0]
     stock_name, market, state = stock[["name", "market_name", "_SECT_TP_NM"]]
 
     print(f"{stock_name}({code}) - {market} / {state}")

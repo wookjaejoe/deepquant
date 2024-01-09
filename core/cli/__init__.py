@@ -1,4 +1,5 @@
 import pandas as pd
+import requests
 
 
 def from_bok():
@@ -15,12 +16,20 @@ def from_bok():
 
 
 def from_oecd():
-    df = pd.read_csv("~/Downloads/DP_LIVE_07122023073629605.csv")
-    df = df[["TIME", "Value"]]
-    df.columns = ["cli_pos", "cli"]
+    url = "https://stats.oecd.org/sdmx-json/data/DP_LIVE/KOR.CLI.AMPLITUD.LTRENDIDX.M/OECD?" + "&".join([
+        "json-lang=en",
+        "dimensionAtObservation=allDimensions",
+        "startPeriod=1900-01",
+        "endPeriod=2099-12"
+    ])
+
+    res = requests.get(url)
+    data = res.json()
+    values = [x[0] for x in data["dataSets"][0]["observations"].values()]
+    months = [x for x in data["structure"]["dimensions"]["observation"] if x["id"] == "TIME_PERIOD"][0]
+    months = [x["id"] for x in months["values"]]
+    df = pd.DataFrame({"cli_pos": months, "cli": values})
     df.index = pd.to_datetime(df["cli_pos"]) + pd.offsets.MonthBegin(2) - pd.DateOffset(days=1)
     df.index.name = "date"
     df["cli_change"] = df["cli"].pct_change()
     return df
-
-
