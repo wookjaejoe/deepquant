@@ -7,13 +7,12 @@ from typing import *
 
 import pandas as pd
 import requests
-from retry import retry
+
 from config import config
 
 _logger = logging.getLogger()
 
 
-@retry(tries=5, delay=1, jitter=1)
 def _call_api(
     entities: str | List[str],
     consolidated: bool,
@@ -51,7 +50,7 @@ def _call_api(
         }
     )
     assert response.status_code == 200, f"Status code: {response.status_code}"
-    assert len(response.json()["data"]["exceptions"]) == 0
+    assert len(response.json()["data"]["exceptions"]) == 0, response.json()["data"]["exceptions"]
     return response
 
 
