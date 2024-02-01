@@ -1,11 +1,10 @@
-jsons
-retry
 numpy
+pyarrow
 pandas
 matplotlib
 scipy
-lxml
-openpyxl
+scikit-learn
+tenacity
 
 pymongo
 pymysql
@@ -13,23 +12,13 @@ sqlalchemy
 
 requests
 websockets
-uvicorn
-fastapi
-slowapi
 
-
-# jupyter
 jupyter
+
 pykrx
-xmltodict
 beautifulsoup4
+lxml
+openpyxl
+xmltodict
 levenshtein
-
-httpx
-starlette
-datetime
-tenacity
-sklearn
-scikit-learn
-
-tenacity
+retry

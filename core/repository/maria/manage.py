@@ -21,6 +21,7 @@ import pykrx
 from core.repository.krx import get_ohlcv_by_date
 from core.repository.maria.conn import MariaConnection, maria_home
 from utils import pdutil
+from sqlalchemy import text
 
 
 def clear(fromdate: date):
@@ -114,8 +115,9 @@ def insert_month_chart(year: int, month: int):
     일봉 차트 테이블을 기반으로 월봉 차트 삽입
     """
     print(f"Inserting into month_chart {year}/{month}")
-    with MariaConnection() as conn:
-        conn.query(f"""insert into month_chart (
+    db = maria_home("finance")
+    with db.connect() as conn:
+        conn.execute(text(f"""insert into month_chart (
         SELECT code,
             MAX(date)                                                    as date,
             SUBSTRING_INDEX(GROUP_CONCAT(name ORDER BY date), ',', -1)   as name,
@@ -134,5 +136,5 @@ def insert_month_chart(year: int, month: int):
         where year(date) = {year} and month(date) = {month}
         group by code, year(date), month(date)
         order by date);
-        """)
+        """))
         conn.commit()

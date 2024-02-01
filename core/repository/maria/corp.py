@@ -10,7 +10,7 @@ class Corp:
     name: str
 
 
-def refetch_all() -> Iterator[Corp]:
+def refetch_all() -> List[Corp]:
     with MariaConnection() as connection:
         cursor = connection.cursor()
         cursor.execute("SELECT * from corp")
@@ -21,7 +21,7 @@ def refetch_all() -> Iterator[Corp]:
 _cache: Dict[str, Corp] = {corp.code: corp for corp in refetch_all()}
 
 
-def get_corps() -> Iterator[Corp]:
+def get_corps() -> List[Corp]:
     return [v for v in _cache.values()]
 
 
