@@ -49,7 +49,7 @@ def stat(code: str):
 
 
 def main():
-    stat("072950")
+    stat("071840")
 
 
 if __name__ == '__main__':

@@ -1,8 +1,10 @@
+import pandas as pd
+
 from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
 from utils import pdutil
 
-fin_loader = FsLoader()
+fin_loader = FsLoader.instance()
 table = get_ohlcv_latest().set_index("code")
 table = table.join(fin_loader.load(2023, 3))
 table = table.rename(columns={
@@ -15,28 +17,35 @@ table["GP/P"] = table["GP/Y"] / table["P"]
 table["O/P"] = table["O/Y"] / table["P"]
 table["E/P"] = table["E/Y"] / table["P"]
 
+#####################
+# 매출액 또는 손익구조 변경
+from core.dartx.매출액또는손익구조변경 import calc
+
+changed = pd.read_csv("매출액또는손익구조변경2.csv", dtype={"code": str})
+changed = changed.set_index("code")
+changed = (
+    changed[[
+        "O_QoQ_pct",
+        "E_QoQ_pct",
+        "EBT_QoQ_pct",
+
+        "O/EQ_QoQ_pct",
+        "E/EQ_QoQ_pct",
+        "EBT/EQ_QoQ_pct",
+    ]]
+    .sum(axis=1)
+    .to_frame("성장2")
+)
+table = table.join(changed)
+table["성장2_pct"] = table["성장2"].rank(pct=True)
+#####################
+
 recipes = {
     "벨류": {
         "GP/P": 0.120550,
         "EQ/P": 0.105678,
     },
-    "퀄리티": {
-        "GP/A": 0.032862,
-        "GP/EQ": 0.028487,
-        "R/A": 0.012971,
-        "GP/R": 0.012141,
-        "O/A": 0.009835,
-        "E/R": 0.005616,
-        "EBT/A": 0.005415,
-        "O/EQ": 0.005188,
-        "O/R": 0.004577,
-        "R/EQ": 0.004484,
-        "EBT/R": 0.003881,
-        "E/A": 0.003815,
-        "EBT/EQ": 0.003162,
-        "E/EQ": 0.002940
-    },
-    "성장": {
+    "성장1": {
         "O_QoQ": 0.027,
         "E_QoQ": 0.024,
         "EBT_QoQ": 0.017,
@@ -55,6 +64,10 @@ recipes = {
     },
     "가격": {
         "P": -1
+    },
+    "성장": {
+        "성장1": 1,
+        "성장2": 1
     },
     "전략": {
         "벨류": 1,
@@ -88,6 +101,7 @@ for name, recipe in recipes.items():
     table[name] = sum([table[f"{k}_pct"] * w for k, w in recipe.items()])
     table[f"{name}_pct"] = table[name].rank(pct=True)
 
+# Attach tags ##############################
 table["tags"] = ""
 
 
@@ -97,16 +111,16 @@ def append_tag(selector, f: str):
 
 append_tag(table["open"] == 0, "거래정지")
 
-for quanlity_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
-                        "EBT/EQ", "E/EQ", "퀄리티"]:
-    append_tag(table[f"{quanlity_factor}_pct"] < 0.10, f"저 {quanlity_factor}")
+quality_factors = [
+    "GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
+    "EBT/EQ", "E/EQ"
+]
+for qf in quality_factors:
+    append_tag(table[f"{qf}_pct"] < 0.10, f"저 {qf}")
 
 table = table.sort_values("전략_pct", ascending=False)
-table[
-    pdutil.sort_columns(
-        table.columns,
-        ["전략_pct", "name", "close",
-         "tags"]
-    )
-].to_csv("pick.csv")
+table["시총"] = (table["P"] / 1_0000_0000).apply(lambda x: f"{round(x)}억")
+table["전략_pct"] = table["전략_pct"].rank(ascending=False)
+fwd = ["시총", "전략_pct", "name", "close"] + [f"{k}_pct" for k in recipes["전략"].keys()] + ["tags"]
+table[pdutil.sort_columns(table.columns, fwd)].to_csv("pick.csv")
 print("Done.")

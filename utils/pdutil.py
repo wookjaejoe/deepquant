@@ -29,6 +29,7 @@ def serialize(df: pd.DataFrame) -> str:
     DataFrame -> Pickle -> Base64
     """
     buffer = io.BytesIO()
+    # noinspection PyTypeChecker
     df.to_pickle(buffer)
     return base64.b64encode(buffer.getvalue()).decode("utf8")  # 이걸 base64 저장
 
@@ -41,3 +42,11 @@ def deserialize(b64: str) -> pd.DataFrame:
     decoded_bytes = base64.b64decode(b64)
     buffer = io.BytesIO(decoded_bytes)
     return pd.read_pickle(buffer)
+
+
+def intersection(data: list):
+    result = set(data[0])
+    for item in data[1:]:
+        result = result.intersection(set(item))
+
+    return result

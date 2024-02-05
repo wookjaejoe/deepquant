@@ -188,11 +188,13 @@ class YearMonth(Valuable):
     def next(self):
         return self.from_value(self.value() + 1)
 
-    def to(self, end: YearMonth) -> Iterable[YearMonth]:
-        item = self
+    def to(self, end: YearMonth) -> List[YearMonth]:
+        item, result = self, []
         while item <= end:
-            yield item
+            result.append(item)
             item = item.next
+
+        return result
 
     def __str__(self):
         return "-".join([str(self.year).ljust(4, "0"), str(self.month).rjust(2, "0")])

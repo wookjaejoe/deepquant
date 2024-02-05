@@ -16,6 +16,7 @@ websockets
 jupyter
 
 pykrx
+dart_fss
 beautifulsoup4
 lxml
 openpyxl
