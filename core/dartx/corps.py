@@ -1,14 +1,12 @@
 import io
 import logging
 import zipfile
-from datetime import date
 
 import pandas as pd
 import requests
 from retry import retry
 
 from core.dartx.apikey import OpenDartApiKey
-from core.repository import maria_home
 
 _logger = logging.getLogger()
 
@@ -38,19 +36,19 @@ def fetch_corps() -> pd.DataFrame:
     )
 
 
-def upload_stocks():
+def fetch_stocks():
     corps = fetch_corps()
     corps = corps[corps["stock_code"].str.len() == 6]
 
+    # 병렬 처리하지 말 것. 동시 요청 보냈다가 차단 당할 수 있음.
     companies = []
     num = 1
     for corp_code in corps["corp_code"]:
-        _logger.info(f"[{num}/{len(corps)}] Fetching company info...")
+        print(f"[{num}/{len(corps)}] Fetching company info {corp_code}...")
         companies.append(_company(corp_code))
         num += 1
 
-    companies = pd.DataFrame(companies)
-    companies.to_sql("stocks_" + date.today().strftime("%Y%m%d"), maria_home(), index=False)
+    return pd.DataFrame(companies)
 
 
 @retry(tries=3, delay=1, jitter=5)

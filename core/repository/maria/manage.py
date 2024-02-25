@@ -17,11 +17,28 @@ from datetime import date
 
 import pandas as pd
 import pykrx
+from sqlalchemy import text
 
 from core.repository.krx import get_ohlcv_by_date
-from core.repository.maria.conn import MariaConnection, maria_home
+from core.repository.maria.conn import maria_home
 from utils import pdutil
-from sqlalchemy import text
+
+from core.dartx.corps import fetch_stocks
+
+
+def update_stocks():
+    """
+    dart 통해 종목 리스트 수집하고, DB 업데이트
+    """
+
+    # 종목 조회
+    df = fetch_stocks()
+    db = maria_home("finance")
+    today = date.today().strftime("%Y%m%d")
+
+    # 테이블 생성 및 업데이트
+    df.to_sql(f"stocks_{today}", db, index=False)
+    df.to_sql("stocks", db, index=False, if_exists="replace")
 
 
 def clear(fromdate: date):
@@ -30,10 +47,10 @@ def clear(fromdate: date):
     """
 
     print(f"Clearing index_chart, chart, month_chart where date >= {fromdate}")
-    with MariaConnection() as conn:
-        conn.query(f"delete from index_chart where date >= '{fromdate}';")
-        conn.query(f"delete from chart where date >= '{fromdate}';")
-        conn.query(f"delete from month_chart where date >= '{fromdate}';")
+    with maria_home("finance").connect() as conn:
+        conn.execute(text(f"delete from index_chart where date >= '{fromdate}';"))
+        conn.execute(text(f"delete from chart where date >= '{fromdate}';"))
+        conn.execute(text(f"delete from month_chart where date >= '{fromdate}';"))
         conn.commit()
 
 
@@ -83,8 +100,8 @@ def _create_month_chart_table(table_name: str):
     """
     월봉 차트 테이블 생성
     """
-    with MariaConnection() as conn:
-        conn.query(
+    with maria_home("finance").connect() as conn:
+        conn.execute(text(
             f"""
             create table {table_name}
             (
@@ -103,10 +120,12 @@ def _create_month_chart_table(table_name: str):
                 primary key (code, date)
             );
             """
-        )
+        ))
         conn.commit()
-        conn.query("create index if not exists chart_code_index on month_chart (code);")
-        conn.query("create index if not exists chart_date_index on month_chart (date);")
+
+        # 인덱스 설정
+        conn.execute("create index if not exists chart_code_index on month_chart (code);")
+        conn.execute("create index if not exists chart_date_index on month_chart (date);")
         conn.commit()
 
 
