@@ -143,6 +143,5 @@ class FsLoader:
             result[f"{AccAlias[is_col]}_QoQ"] = Growth.rate(fins[0][is_col], fins[4][is_col])
             result[f"{AccAlias[is_col]}/EQ_QoQ"] = fins[0][is_col] / result["EQ"] - fins[4][is_col] / result["EQ"]
             result[f"{AccAlias[is_col]}/A_QoQ"] = fins[0][is_col] / result["A"] - fins[4][is_col] / result["A"]
-            result[f"{AccAlias[is_col]}_xQoQ"] = fins[0][is_col] - fins[4][is_col]
 
         return result

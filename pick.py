@@ -121,6 +121,18 @@ for qf in quality_factors:
 table = table.sort_values("전략_pct", ascending=False)
 table["시총"] = (table["P"] / 1_0000_0000).apply(lambda x: f"{round(x)}억")
 table["전략_pct"] = table["전략_pct"].rank(ascending=False)
-fwd = ["시총", "전략_pct", "name", "close"] + [f"{k}_pct" for k in recipes["전략"].keys()] + ["tags"]
-table[pdutil.sort_columns(table.columns, fwd)].to_csv("pick.csv")
+
+
+def flat(k):
+    result = []
+    if k in recipes.keys():
+        result += [k]
+        for sub_key in recipes[k].keys():
+            result += flat(sub_key)
+
+    return result
+
+
+fwd = ["시총", "전략_pct", "name", "close"] + [f"{f}_pct" for f in ["전략", "성장1", "성장2", "벨류", "가격"]] + ["tags"]
+table[fwd].to_csv("pick.csv")
 print("Done.")
