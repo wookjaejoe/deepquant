@@ -14,17 +14,52 @@ insert_month_chart(2024, 1)
 """
 
 from datetime import date
+
+import pandas as pd
+
+from core import FsDb
+from core.repository import get_stocks
+from core.repository import maria_home
 from core.repository.maria.manage import *
 
 
-def main():
-    fromdate = date(2024, 2, 1)
+def update_charts():
+    fromdate = date(2024, 3, 1)
 
     # update_stocks()
     clear(fromdate)
     update_index_chart(fromdate)
     update_chart(fromdate)
     insert_month_chart(fromdate.year, fromdate.month)
+
+
+def update_fs():
+    # 종목 정보
+    stocks = get_stocks().set_index("stock_code")
+
+    # 최신 종가
+    chart = pd.read_sql(
+        "select * from chart where date = (select max(date) from chart)",
+        maria_home()
+    ).set_index("code")
+
+    df = stocks.join(chart)
+    df = df[df["cap"].notna()].sort_values("cap", ascending=False)
+
+    # 수집 시작
+    fs_db = FsDb()
+    fs_db.update_all(
+        list(df.index),
+        date_from=date(2023, 12, 1),
+        date_to=date.today()
+    )
+
+
+def main():
+    # update_stocks()
+    # update_charts()
+    # update_fs()
+    FsDb().make_table()
 
 
 if __name__ == '__main__':

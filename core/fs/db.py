@@ -65,7 +65,7 @@ class FsDb:
         """
         return pd.read_sql(f"select distinct date from `{code}`", self.con)
 
-    def pivot(self):
+    def _pivot(self):
         """
         싱글 테이블로 변환
         """
@@ -89,7 +89,7 @@ class FsDb:
             df = df.reset_index()
             df["year"] = df["date"].apply(lambda x: x.year)
             df["month"] = df["date"].apply(lambda x: x.month)
-            df["qtr"] = df["type_id"].replace({["F", "B", "T", "K"][q - 1]: q for q in [1, 2, 3, 4]})
+            df["qtr"] = df["type_id"].map({"F": 1, "B": 2, "T": 3, "K": 4})
             df["code"] = code
             result = df[pdutil.sort_columns(
                 df.columns,
@@ -128,7 +128,7 @@ class FsDb:
             """
             con.commit()
 
-        self.pivot().to_sql(table_name, db, index=False, if_exists="append")
+        self._pivot().to_sql(table_name, db, index=False, if_exists="append")
 
     def reports(self, code: str):
         query = f"""
@@ -138,7 +138,7 @@ class FsDb:
         """
         return pd.read_sql(query, self.con)
 
-    def update(self, code: str, df: pd.DataFrame):
+    def _update(self, code: str, df: pd.DataFrame):
         if df.empty:
             return
 
@@ -206,4 +206,4 @@ class FsDb:
                 assert df["symbol"].nunique() == 1
                 df = df.drop(columns=["symbol", "entity_name"])  # 불필요한 칼럼 제거
                 df = df.dropna()
-                self.update(code, df)
+                self._update(code, df)
