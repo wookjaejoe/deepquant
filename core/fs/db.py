@@ -128,7 +128,7 @@ class FsDb:
             """
             con.commit()
 
-        self._pivot().to_sql(table_name, db, index=False, if_exists="append")
+        self._pivot().to_sql(table_name, db, index=False, if_exists="replace")
 
     def reports(self, code: str):
         query = f"""
