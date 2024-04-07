@@ -101,7 +101,7 @@ class FsDb:
 
         return results
 
-    def make_table(self, db_name: str = "finance", table_name: str = "fs"):
+    def make_table(self, db_name: str = "finance", table_name: str = f"fs_{date.today()}"):
         db = maria_home(db_name)
         with db.connect() as con:
             f"""

@@ -50,7 +50,7 @@ def update_fs():
     fs_db = FsDb()
     fs_db.update_all(
         list(df.index),
-        date_from=date(2023, 12, 1),
+        date_from=date(2023, 1, 1),
         date_to=date.today()
     )
 
@@ -58,7 +58,7 @@ def update_fs():
 def main():
     # update_stocks()
     # update_charts()
-    # update_fs()
+    update_fs()
     FsDb().make_table()
 
 
