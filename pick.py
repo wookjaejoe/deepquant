@@ -80,6 +80,8 @@ def append_tag(selector, f: str):
 
 
 append_tag(table["open"] == 0, "거래정지")
+append_tag(table["E/Y"] < 0, "순이익 적자")
+append_tag(table["O/Y"] < 0, "영업이익 적자")
 
 for quanlity_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
                         "EBT/EQ", "E/EQ"]:
