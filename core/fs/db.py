@@ -188,7 +188,7 @@ class FsDb:
 
             for consolidated in [True, False]:
                 try:
-                    df = GetFinancialStatements.call_api(
+                    df = GetFinancialStatements.call(
                         code=code,
                         consolidated=consolidated,
                         date_from=date_from,
