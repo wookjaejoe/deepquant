@@ -79,5 +79,5 @@ def get_ohlcv_latest():
             continue
 
         df = get_ohlcv_by_date(target_date)
-        if len(df[df["vol"] != 0]) / len(df) > 0.95:
+        if len(df[df["vol"] != 0]) / len(df) > 0.8:
             return df

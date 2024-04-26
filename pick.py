@@ -2,8 +2,9 @@ from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
 from utils import pdutil
 
-fin_loader = FsLoader()
+
 table = get_ohlcv_latest().set_index("code")
+fin_loader = FsLoader()
 table = table.join(fin_loader.load(2023, 4))
 table = table.rename(columns={
     "cap": "P",
