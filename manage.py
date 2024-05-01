@@ -13,27 +13,19 @@ insert_month_chart(2024, 1)
 0. Financial data
 """
 
-from datetime import date
-
-import pandas as pd
-
 from core import FsDb
 from core.repository import get_stocks
-from core.repository import maria_home
 from core.repository.maria.manage import *
 
 
-def update_charts():
-    fromdate = date(2024, 3, 1)
-
-    # update_stocks()
+def update_charts(fromdate: date):
     clear(fromdate)
     update_index_chart(fromdate)
     update_chart(fromdate)
     insert_month_chart(fromdate.year, fromdate.month)
 
 
-def update_fs():
+def update_fs(fromyear: int):
     # 종목 정보
     stocks = get_stocks().set_index("stock_code")
 
@@ -50,15 +42,19 @@ def update_fs():
     fs_db = FsDb()
     fs_db.update_all(
         list(df.index),
-        date_from=date(2023, 1, 1),
+        date_from=date(fromyear, 1, 1),
         date_to=date.today()
     )
 
 
 def main():
-    # update_stocks()
-    # update_charts()
-    update_fs()
+    update_stocks()
+
+    fromdate = date(2024, 3, 1)
+    update_charts(fromdate)
+
+    fromyear = 2023
+    update_fs(fromyear)
     FsDb().make_table()
 
 
