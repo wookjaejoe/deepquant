@@ -1,10 +1,11 @@
 import base64
+import json
 
 import pandas as pd
 import requests
 
 from config import config
-import json
+from core.ds.exceptions import AuthenticationError
 
 
 def call(func_name: str, *args, **kwargs):
@@ -25,6 +26,9 @@ def call(func_name: str, *args, **kwargs):
             "x-deepsearch-encoded-input": "true",
         }
     )
+
+    if res.status_code == 426:
+        raise AuthenticationError()
 
     assert res.status_code == 200, f"Status code: {res.status_code}"
     assert len(res.json()["data"]["exceptions"]) == 0, res.json()["data"]["exceptions"]

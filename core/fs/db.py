@@ -6,6 +6,7 @@ import pandas as pd
 from sqlalchemy import text
 
 from core.ds import GetFinancialStatements
+from core.ds.exceptions import AuthenticationError
 from core.repository import maria_home
 from utils import pdutil
 
@@ -194,6 +195,8 @@ class FsDb:
                         date_from=date_from,
                         date_to=date_to
                     )
+                except AuthenticationError:
+                    raise
                 except Exception as e:
                     _logger.error(f"Failed to call API - {code, consolidated, date_from, date_to}", exc_info=e)
                     continue
