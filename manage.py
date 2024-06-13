@@ -26,32 +26,31 @@ def update_charts(fromdate: date):
 
 
 def update_fs(fromyear: int):
-    # 종목 정보
-    stocks = get_stocks().set_index("stock_code")
-
-    # 최신 종가
-    chart = pd.read_sql(
-        "select * from chart where date = (select max(date) from chart)",
-        maria_home()
-    ).set_index("code")
-
-    df = stocks.join(chart)
-    df = df[df["cap"].notna()].sort_values("cap", ascending=False)
-
-    # 수집 시작
+    # # 종목 정보
+    # stocks = get_stocks().set_index("stock_code")
+    #
+    # # 최신 종가
+    # chart = pd.read_sql(
+    #     "select * from chart where date = (select max(date) from chart)",
+    #     maria_home()
+    # ).set_index("code")
+    #
+    # df = stocks.join(chart)
+    # df = df[df["cap"].notna()].sort_values("cap", ascending=False)
+    #
+    # # 수집 시작
     fs_db = FsDb()
     fs_db.update_all(
-        list(df.index),
+        ["053270"],
         date_from=date(fromyear, 1, 1),
         date_to=date.today()
     )
 
 
 def main():
-    update_stocks()
-
-    fromdate = date(2024, 3, 1)
-    update_charts(fromdate)
+    # update_stocks()
+    # fromdate = date(2024, 5, 1)
+    # update_charts(fromdate)
 
     fromyear = 2023
     update_fs(fromyear)

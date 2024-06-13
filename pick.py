@@ -2,10 +2,9 @@ from core.fs import FsLoader
 from core.repository.krx import get_ohlcv_latest
 from utils import pdutil
 
-
 table = get_ohlcv_latest().set_index("code")
 fin_loader = FsLoader()
-table = table.join(fin_loader.load(2023, 4))
+table = table.join(fin_loader.load(2024, 1))
 table = table.rename(columns={
     "cap": "P",
 })
@@ -41,10 +40,24 @@ recipes = {
     "가격": {
         "P": -1
     },
-    "전략": {
+    "_전략": {
+        "가격": 1,
         "벨류": 1,
-        "성장": 1,
-        "가격": 1
+        "성장": 1
+    },
+    "퀄리티": {
+        "O/EQ": 5,
+        "EBT/EQ": 4,
+        "E/EQ": 3,
+    },
+    "성장2": {
+        "O_QoQ": 2,
+        "EBT_QoQ": 1,
+    },
+    "전략": {
+        "퀄리티": 2,
+        "성장2": 1,
+        "O/P": 1
     }
 }
 
@@ -88,12 +101,13 @@ for quanlity_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "
                         "EBT/EQ", "E/EQ"]:
     append_tag(table[f"{quanlity_factor}_pct"] < 0.10, f"저 {quanlity_factor}")
 
-table = table.sort_values("전략_pct", ascending=False)
+factor = "전략"
+table = table.sort_values(f"{factor}_pct", ascending=False)
 # table[["전략_pct", "name", "close", "벨류_pct", "성장_pct", "P", "tags"]].to_csv("pick.csv")
 table[
     pdutil.sort_columns(
         table.columns,
-        ["전략_pct", "name", "close", "벨류_pct", "성장_pct", "P", "tags"]
+        [f"{factor}_pct", "name", "close"] + [f"{k}_pct" for k in recipes[factor].keys()] + ["EBT/EQ_pct", "O_QoQ_pct", "O/P_pct"] + ["tags"]
     )
 ].to_csv("pick.csv")
 print("Done.")

@@ -47,8 +47,12 @@ def make_table(year: int, qtr: int):
     reports = list_reports(year, qtr)
     for stock_code, row in reports.iterrows():
         corp_code = row["corp_code"]
-        year = 2023
-        report_code = "11014"
+        report_codes = {
+            1: "11013",
+            2: "11012",
+            3: "11014",
+            4: "11011",
+        }
 
         print(stock_code, row["flr_nm"])
         for fs_div in ["CFS", "OFS"]:
@@ -56,7 +60,7 @@ def make_table(year: int, qtr: int):
                 df = request_report(
                     corp_code=corp_code,
                     bsns_year=year,
-                    reprt_code=report_code,
+                    reprt_code=report_codes[qtr],
                     fs_div=fs_div
                 )
             except AssertionError as e:
@@ -65,7 +69,12 @@ def make_table(year: int, qtr: int):
 
             df.insert(0, "stock_code", stock_code)
             df.insert(0, "fs_div", fs_div)
-            df.to_sql(f"fs_{year}_{qtr}Q", db, if_exists="append", index=False)
+
+            try:
+                df = df[["fs_div", "stock_code", "sj_div", "account_id", "thstrm_amount"]]
+                df.to_sql(f"fs_{year}_{qtr}Q", db, if_exists="append", index=False)
+            except Exception as e:
+                print(f"[ERROR] {e}")
 
 
 accounts = {
