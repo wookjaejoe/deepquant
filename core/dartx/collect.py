@@ -35,7 +35,7 @@ def list_reports(year: int, qtr: int):
     bgn_de = date(year, fs_month, calendar.monthrange(year, fs_month)[1])
     df = search_reports(
         bgn_de=bgn_de.strftime("%Y%m%d"),
-        end_de=(bgn_de + timedelta(days=90)).strftime("%Y%m%d"),
+        end_de=(bgn_de + timedelta(days=91)).strftime("%Y%m%d"),
         pblntf_detail_ty=pblntf_detail_ty
     )
     df = df[df["stock_code"].apply(lambda x: len(x.strip()) == 6)]
@@ -44,6 +44,9 @@ def list_reports(year: int, qtr: int):
 
 
 def make_table(year: int, qtr: int):
+    """
+    입력된 년, 분기 공시 보고서 조회 후 재무제표 수집해서 fs_{year}_{qtr}Q 형식의 테이블 생성
+    """
     reports = list_reports(year, qtr)
     for stock_code, row in reports.iterrows():
         corp_code = row["corp_code"]

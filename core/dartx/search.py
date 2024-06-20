@@ -9,6 +9,9 @@ from core.dartx.apikey import OpenDartApiKey
 from core.repository.maria.stocks import find_stock
 from utils.timeutil import YearQtr, YearMonth
 
+import logging
+
+_logger = logging.getLogger()
 
 @retry(tries=3, delay=1, jitter=10)
 def search_reports(
@@ -45,6 +48,9 @@ def search_reports(
         body = res.json()
         if body["status"] == "013":
             break
+
+        if body["message"]:
+            _logger.info("Response body: " + body["message"])
 
         df = pd.concat([df, pd.DataFrame(body["list"])])
 
