@@ -102,7 +102,7 @@ class FsDb:
 
         return results
 
-    def make_table(self, db_name: str = "finance", table_name: str = f"fs_{date.today()}"):
+    def make_table(self, db_name: str = "finance"):
         db = maria_home(db_name)
         with db.connect() as con:
             f"""
@@ -129,7 +129,10 @@ class FsDb:
             """
             con.commit()
 
-        self._pivot().to_sql(table_name, db, index=False, if_exists="replace")
+        self._pivot().to_sql(f"fs_{date.today()}", db, index=False, if_exists="replace")
+        self._pivot().to_sql(f"fs", db, index=False, if_exists="replace")
+
+
 
     def reports(self, code: str):
         query = f"""
@@ -202,6 +205,7 @@ class FsDb:
                     continue
 
                 if df.empty:
+                    _logger.info("Dataframe empty. Skipping...")
                     continue
 
                 df["date"] = pd.to_datetime(df["date"]).dt.date

@@ -40,7 +40,7 @@ recipes = {
     "가격": {
         "P": -1
     },
-    "_전략": {
+    "전략1": {
         "가격": 1,
         "벨류": 1,
         "성장": 1
@@ -54,10 +54,14 @@ recipes = {
         "O_QoQ": 2,
         "EBT_QoQ": 1,
     },
-    "전략": {
+    "전략2": {
         "퀄리티": 2,
         "성장2": 1,
         "O/P": 1
+    },
+    "전략": {
+        "전략1": 1,
+        "전략2": 2,
     }
 }
 
@@ -97,17 +101,29 @@ append_tag(table["open"] == 0, "거래정지")
 append_tag(table["E/Y"] < 0, "순이익 적자")
 append_tag(table["O/Y"] < 0, "영업이익 적자")
 
-for quanlity_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
-                        "EBT/EQ", "E/EQ"]:
-    append_tag(table[f"{quanlity_factor}_pct"] < 0.10, f"저 {quanlity_factor}")
+for quality_factor in ["GP/A", "GP/EQ", "R/A", "GP/R", "O/A", "E/R", "EBT/A", "O/EQ", "O/R", "R/EQ", "EBT/R", "E/A",
+                       "EBT/EQ", "E/EQ"]:
+    append_tag(table[f"{quality_factor}_pct"] < 0.10, f"저 {quality_factor}")
 
 factor = "전략"
 table = table.sort_values(f"{factor}_pct", ascending=False)
-# table[["전략_pct", "name", "close", "벨류_pct", "성장_pct", "P", "tags"]].to_csv("pick.csv")
-table[
-    pdutil.sort_columns(
-        table.columns,
-        [f"{factor}_pct", "name", "close"] + [f"{k}_pct" for k in recipes[factor].keys()] + ["EBT/EQ_pct", "O_QoQ_pct", "O/P_pct"] + ["tags"]
-    )
-].to_csv("pick.csv")
+
+
+def flat_recursively(key: str):
+    if key not in recipes:
+        return [key]
+
+    result = [key]
+    for k in recipes[key].keys():
+        result += flat_recursively(k)
+
+    return result
+
+
+columns = pdutil.sort_columns(
+    table.columns,
+    [f"{factor}_pct", "name", "close"] + [f"{f}_pct" for f in flat_recursively(factor)] + ["tags"]
+)
+
+table[columns].to_csv("pick.csv")
 print("Done.")
